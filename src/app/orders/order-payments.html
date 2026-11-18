@@ -1,0 +1,61 @@
+<section class="panel" aria-labelledby="payments-heading">
+  <h2 id="payments-heading">Cobros y devoluciones</h2>
+  <p>Registra movimientos recibidos o devueltos; no se procesan pagos en línea.</p>
+  @if (error()) { <p class="error" role="alert">{{ error() }} <button type="button" class="link" (click)="refresh()" [disabled]="saving()">Actualizar</button></p> }
+  @if (notice()) { <p class="success" role="status">{{ notice() }}</p> }
+  @if (loading()) { <p role="status">Cargando movimientos…</p> }
+  @if (ledger(); as data) {
+    <dl>
+      <div><dt>Pagado neto</dt><dd>{{ money(data.paidCents) }}</dd></div>
+      <div><dt>Saldo</dt><dd>{{ data.totalCents === null ? 'Sin calcular' : money(data.totalCents - data.paidCents) }}</dd></div>
+    </dl>
+    @if (data.totalCents === null) { <p class="warning">El total no está calculado; no se pueden registrar cobros.</p> }
+    <h3>Historial</h3>
+    @if (!data.payments.length) { <p>Aún no hay movimientos.</p> }
+    <ul class="entries">
+      @for (entry of historyPage().entries; track entry.id) {
+        <li>
+          <strong>{{ entry.kind === kinds.Payment ? 'Cobro' : 'Devolución' }} · {{ money(entry.amountCents) }}</strong>
+          <span>Referencia {{ entry.reference || entry.id.slice(-6) }}@if (entry.originalPaymentId) { · Cobro original {{ entry.originalPaymentId.slice(-6) }} }</span>
+          <span>{{ methodLabel(entry.method) }} · {{ date(entry.createdAt) }} · {{ entry.createdBy }}</span>
+          @if (entry.reason) { <span>Motivo: {{ entry.reason }}</span> }
+          <a class="link" [href]="receiptUrl(entry.id)" target="_blank" rel="noopener">Imprimir recibo</a>
+        </li>
+      }
+    </ul>
+    <app-pagination label="Paginación del historial de cobros" [info]="historyPage()" (change)="historyRequest.set($event)" />
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <h3>Registrar movimiento</h3>
+      <label for="payment-kind">Tipo</label>
+      <select id="payment-kind" formControlName="kind">
+        <option [value]="kinds.Payment">Cobro</option><option [value]="kinds.Refund">Devolución</option>
+      </select>
+      @if (form.controls.kind.value === kinds.Refund) {
+        <label for="payment-original">Cobro original</label>
+        <select id="payment-original" formControlName="originalPaymentId" required>
+          <option value="">Selecciona un cobro</option>
+          @for (entry of data.payments; track entry.id) {
+            @if (entry.kind === kinds.Payment) { <option [value]="entry.id">{{ money(entry.amountCents) }} · {{ date(entry.createdAt) }} · {{ entry.id.slice(-6) }}</option> }
+          }
+        </select>
+        <label for="payment-reason">Motivo</label>
+        <input id="payment-reason" formControlName="reason" maxlength="500" required />
+      }
+      <label for="payment-amount">Monto en pesos dominicanos</label>
+      <input id="payment-amount" formControlName="amount" type="text" inputmode="decimal" required aria-describedby="payment-amount-help" />
+      <p id="payment-amount-help">Usa un punto para los centavos, por ejemplo 1500.50.</p>
+      <label for="payment-method">Medio</label>
+      <select id="payment-method" formControlName="method">
+        <option [value]="methods.Cash">Efectivo</option><option [value]="methods.Transfer">Transferencia</option>
+        <option [value]="methods.Card">Tarjeta</option><option [value]="methods.Other">Otro</option>
+      </select>
+      @if (form.controls.method.value === methods.Transfer) {
+        <label for="payment-reference">Referencia de transferencia</label>
+        <input id="payment-reference" formControlName="reference" maxlength="120" />
+      }
+      <button type="submit" [disabled]="saving() || (data.totalCents === null && form.controls.kind.value === kinds.Payment)">
+        {{ saving() ? 'Guardando…' : 'Registrar movimiento' }}
+      </button>
+    </form>
+  }
+</section>

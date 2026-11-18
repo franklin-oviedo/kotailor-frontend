@@ -1,0 +1,63 @@
+:host { display: block; }
+h1, p { margin: 0; }
+h1 { font-size: clamp(24px, 2.1vw, 30px); font-weight: 600; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+.subtitle { margin-top: 4px; color: #61666a; font-size: clamp(10px, .9vw, 13px); }
+.heading { display: flex; justify-content: space-between; gap: 20px; align-items: start; }
+.customer-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: clamp(16px, 1.6vw, 23px); }
+.customer-count { color: #61666a; font-size: clamp(9px, .8vw, 12px); }
+.customer-layout { display: grid; grid-template-columns: minmax(220px, 22.65vw) minmax(0, 1fr); gap: 1.5vw; margin-top: 1.5vw; align-items: start; }
+.customer-layout .list { margin-top: 0; padding: max(10px, 1.1vw); border: 1px solid #e2e9eb; border-radius: 9px; background: white; }
+.customer-preview { min-width: 0; }
+.customer-preview > p { padding: 1.75vw; border: 1px solid #e2e9eb; border-radius: 9px; background: white; color: #61666a; font-size: clamp(10px, .9vw, 13px); }
+.list, form { max-width: 700px; margin-top: 36px; }
+label { display: block; margin-bottom: 8px; color: #61666a; font-size: 12px; }
+input:not([type='checkbox']), select { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #cfdadd; border-radius: 6px; background: white; color: #16343c; }
+input::placeholder { color: #61666a; opacity: 1; }
+form label:not(:first-child) { margin-top: 20px; }
+.primary, .secondary { min-height: 46px; padding: 12px 24px; border: 1px solid #005d74; border-radius: 6px; background: #005d74; color: white; font-size: 13px; font-weight: 600; }
+.secondary { border-color: #cfdadd; background: white; color: #005d74; }
+button:disabled { cursor: not-allowed; opacity: .65; }
+form .primary, form .secondary { display: block; width: 100%; margin-top: 16px; }
+.help { margin-top: 8px; color: #61666a; font-size: 12px; }
+form label.checkbox { display: flex; align-items: center; gap: 8px; margin: 24px 0 32px; color: #005d74; }
+.checkbox input { width: 18px; height: 18px; }
+.list-caption { margin: 1.4vw 0 .6vw; color: #61666a; font-size: clamp(8px, .7vw, 10px); text-transform: uppercase; }
+.customer-list { display: grid; gap: .55vw; padding: 0; margin: 0 0 1.2vw; list-style: none; }
+.customer-list li { min-height: 5.2vw; border: 0; border-bottom: 1px solid #e2e9eb; border-radius: 0; background: white; }
+.customer-list a, .customer-list button { position: relative; display: grid; gap: .35vw; width: 100%; min-height: 5.2vw; padding: .8vw 2.8vw .8vw .8vw; border: 0; background: transparent; color: inherit; text-align: left; text-decoration: none; overflow-wrap: anywhere; }
+.customer-list .arrow { position: absolute; right: 16px; top: 32px; color: #005d74; font-size: 17px; }
+.customer-list li.selected { border-color: #e7f5f6; border-radius: 4px; background: #e7f5f6; }
+.customer-list strong { font-size: clamp(12px, 1.2vw, 17px); }
+.customer-list span, .list p { color: #61666a; font-size: clamp(9px, .83vw, 12px); }
+.list > p { margin-top: 20px; }
+.error { margin: 16px 0; color: #9c2020 !important; font-size: 13px; }
+.field-error { margin-top: 6px; color: #9c2020; font-size: 12px; }
+.success { color: #005d74 !important; }
+.mobile-add { display: none; }
+.mobile-customer { display: none !important; }
+@media (min-width: 701px) {
+  .primary, .secondary { min-height: clamp(29px, 2.8vw, 40px); padding: 0 1.5vw; font-size: clamp(10px, .9vw, 13px); }
+  input:not([type='checkbox']), select { min-height: clamp(30px, 2.9vw, 42px); padding: .8vw; font-size: clamp(11px, .9vw, 13px); }
+  .customer-list li, .customer-list a, .customer-list button { min-height: max(53px, 5.2vw); }
+  .customer-list .arrow { top: 50%; right: 1.1vw; transform: translateY(-50%); }
+}
+@media (max-width: 700px) {
+  h1 { font-size: 26px; }
+  form { margin-top: 32px; }
+  .customer-actions { margin-top: 20px; }
+  .customer-count { font-size: 12px; }
+  .customer-layout { display: block; margin-top: 32px; }
+  .customer-layout .list { padding: 0; border: 0; background: transparent; }
+  .customer-list { gap: 16px; }
+  .customer-list li { min-height: 91px; border: 1px solid #e2e9eb; border-radius: 9px; }
+  .customer-list a, .customer-list button { min-height: 91px; padding: 15px 40px 15px 15px; }
+  .customer-list li.selected { border-color: #e2e9eb; background: white; }
+  .customer-preview { display: none; }
+  .show-detail .customer-preview { display: block; margin-top: 24px; }
+  .desktop-customer { display: none !important; }
+  .mobile-customer { display: grid !important; }
+  .desktop-add { display: none; }
+  .mobile-add { display: block; width: 100%; margin-top: 36px; }
+}

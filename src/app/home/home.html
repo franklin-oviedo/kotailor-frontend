@@ -1,0 +1,88 @@
+<app-shell>
+  @if (auth.session(); as session) {
+    <h1 class="desktop-title">Tu sastrería, en un vistazo</h1>
+    <p class="desktop-intro">Todo lo que necesitas para empezar el día.</p>
+    <h1 class="mobile-title">{{ greeting() }}, {{ session.user.name }}.</h1>
+    <p class="today">{{ today() }}</p>
+    <section class="welcome">
+      <h2>{{ greeting() }}, {{ session.user.name }}.</h2>
+      <p>@if (summary(); as summary) { Tienes {{ summary.activeOrders }} {{ summary.activeOrders === 1 ? 'orden activa' : 'órdenes activas' }} y {{ summary.dueToday }} {{ summary.dueToday === 1 ? 'entrega pendiente' : 'entregas pendientes' }} para hoy. } @else { Tu sesión está activa. }</p>
+      <a routerLink="/ordenes" [queryParams]="{ crear: '1' }">+ Nueva orden</a>
+    </section>
+    @if (session.workshops.length === 0) {
+      <p class="workshop-notice" role="status">
+          Tu cuenta aún no tiene una sastrería asociada. Los indicadores y registros no están disponibles.
+      </p>
+    }
+    @if (loading()) { <p class="summary-state" role="status">Cargando resumen de órdenes…</p> }
+    <section class="metrics" [class.manager]="canManage" aria-label="Indicadores de la sastrería">
+      <article><p>Órdenes activas</p><strong>{{ summary()?.activeOrders ?? '—' }}</strong><span>Sin entregar</span></article>
+      <article><p>Entregas de hoy</p><strong>{{ summary()?.dueToday ?? '—' }}</strong><span>Pendientes de entrega</span></article>
+      @if (canManage) {
+        <article class="desktop-metric">
+          <p>Cobrado este mes</p>
+          <strong>{{ paymentsSummary() ? money(paymentsSummary()!.collectedMonthCents) : '—' }}</strong>
+          <span>{{ paymentsLoading() ? 'Cargando…' : paymentsError() ? 'Datos no disponibles' : 'Cobros registrados en el mes' }}</span>
+        </article>
+        <article class="desktop-metric">
+          <p>Saldo por cobrar</p>
+          <strong>{{ paymentsSummary() ? money(paymentsSummary()!.outstandingCents) : '—' }}</strong>
+          <span>{{ paymentsLoading() ? 'Cargando…' : paymentsError() ? 'Datos no disponibles'
+            : paymentsSummary()?.hasPendingTax ? 'Incluye importes con ITBIS pendiente' : 'Órdenes y facturas emitidas' }}</span>
+        </article>
+      }
+    </section>
+    @if (paymentsError()) {
+      <p class="metric-error" role="alert">
+        No pudimos cargar los indicadores financieros. <button type="button" (click)="load()">Actualizar</button>
+      </p>
+    }
+    <div class="panels">
+      <section class="panel orders">
+        <div class="orders-heading"><h2><span class="desktop-text">Tu atención hace la diferencia</span><span class="mobile-text">Próximas entregas</span></h2><a routerLink="/ordenes">Ver órdenes →</a></div>
+        @if (summary(); as summary) {
+          @if (summary.priorities.length) {
+            <div class="order-columns" aria-hidden="true"><span>Orden / Cliente</span><span>Prenda</span><span>Entrega</span><span>Estado</span></div>
+            <ul>
+              @for (order of summary.priorities; track order.number) {
+                <li><strong>{{ orderNumber(order.number) }} · {{ order.customerName }}</strong><span>{{ order.catalogName }}</span><span>{{ date(order.deliveryLocal) }}</span><span class="order-status">{{ status(order.status) }}</span></li>
+              }
+            </ul>
+          } @else { <p>No hay órdenes pendientes de entrega.</p> }
+        } @else if (error()) {
+          <p class="summary-state error" role="alert">Los indicadores no se pudieron actualizar. <button type="button" (click)="load()">Actualizar</button></p>
+        } @else if (!loading()) { <p>Los indicadores no están disponibles.</p> }
+      </section>
+      <section class="panel agenda">
+        <h2><span class="desktop-text">Tu agenda de hoy</span><span class="mobile-text">Próxima cita</span></h2>
+        @if (!canManage) {
+          <p>La agenda de la sastrería está disponible para propietarios y encargados.</p>
+        } @else if (appointmentsLoading()) {
+          <p role="status">Cargando citas…</p>
+        } @else if (appointmentsError()) {
+          <p class="error" role="alert">No pudimos cargar las citas de hoy.</p>
+          <button type="button" class="retry" (click)="load()">Actualizar</button>
+        } @else if (appointments().length) {
+          <ul class="appointment-list">
+            @for (appointment of appointments(); track appointment.id) {
+              <li>
+                <time [attr.datetime]="appointment.startsAt">{{ appointmentTime(appointment.startsAt) }}</time>
+                <span class="appointment-detail">
+                  <strong>{{ appointmentKindLabel(appointment.kind) }} · {{ appointment.customerName }}</strong>
+                  <small>{{ appointment.responsibleName }}</small>
+                </span>
+                <span class="sync-status" [class.attention]="appointment.syncStatus === syncStatuses.NeedsAttention">
+                  {{ syncLabel(appointment.syncStatus) }}
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p>No tienes citas programadas para hoy.</p>
+        }
+        <a routerLink="/agenda">Abrir agenda →</a>
+      </section>
+    </div>
+    <a class="mobile-new" routerLink="/ordenes" [queryParams]="{ crear: '1' }">+ Nueva orden</a>
+  }
+</app-shell>

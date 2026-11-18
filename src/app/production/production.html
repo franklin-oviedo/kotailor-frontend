@@ -1,0 +1,74 @@
+<app-shell>
+  <p class="notice">Entorno en desarrollo: no introduzcas datos reales de clientes todavía.</p>
+  <h1>Producción</h1>
+  <p class="subtitle">Un flujo claro para cada prenda.</p>
+  @if (workshop) {
+    <div class="filters">
+      <div class="filter">
+        <label for="responsible-filter">Responsable</label>
+        <select id="responsible-filter" [formControl]="responsible">
+          <option [value]="responsibleFilters.All">Todos</option>
+          <option [value]="responsibleFilters.Unassigned">Sin responsable</option>
+          @if (hasHistorical() || responsible.value === responsibleFilters.Historical) {
+            <option [value]="responsibleFilters.Historical">Asignaciones históricas sin identificar</option>
+          }
+          @if (missingResponsible()) { <option [value]="responsible.value">Responsable sin órdenes activas</option> }
+          @for (member of responsibleOptions(); track member.id) { <option [value]="member.id">{{ member.label }}</option> }
+        </select>
+      </div>
+      <div class="filter">
+        <label for="delivery-filter">Entrega</label>
+        <select id="delivery-filter" [formControl]="delivery">
+          <option [value]="filters.All">Todas las fechas</option>
+          <option [value]="filters.ThisWeek">Esta semana</option>
+        </select>
+      </div>
+      <div class="view-selector" role="group" aria-label="Vista de producción">
+        <button type="button" [class.active]="view() === views.Board" [attr.aria-pressed]="view() === views.Board" (click)="view.set(views.Board)">Tablero</button>
+        <button type="button" [class.active]="view() === views.List" [attr.aria-pressed]="view() === views.List" (click)="view.set(views.List)">Lista</button>
+      </div>
+    </div>
+    @if (delivery.value === filters.ThisWeek) { <p class="filter-help">De lunes a domingo, hora de República Dominicana. No incluye entregas vencidas de semanas anteriores.</p> }
+    @if (responsible.value === responsibleFilters.Historical) { <p class="filter-help">Estas órdenes conservan el nombre guardado, pero no se conoce la cuenta asignada.</p> }
+  }
+  @if (!workshop) {
+    <p role="status">Necesitas una sastrería asociada para consultar producción.</p>
+  } @else if (loading() && !data().length) {
+    <p role="status">Cargando producción…</p>
+  } @else if (error()) {
+    <p role="alert">No se pudo cargar producción. <button type="button" (click)="load()">Reintentar</button></p>
+  } @else {
+    <p class="help">Consulta las etapas actuales y busca la orden para actualizarla. Los propietarios y encargados pueden cambiar etapas en su ficha.</p>
+    @if (view() === views.Board) {
+      <div class="stage-selector" role="group" aria-label="Seleccionar etapa">
+        @for (stage of stages(); track stage.status) {
+          <button type="button" [class.active]="selected() === stage.status" [attr.aria-pressed]="selected() === stage.status" (click)="selected.set(stage.status)">{{ label(stage.status) }} <span>{{ stage.total }}</span></button>
+        }
+      </div>
+    }
+    <div class="board" [class.list-view]="view() === views.List">
+      @for (stage of stages(); track stage.status) {
+        <section class="stage" [class.selected]="selected() === stage.status" [attr.data-stage]="stage.status" [attr.aria-label]="label(stage.status)">
+          <div class="stage-heading"><h2>{{ label(stage.status) }}</h2><span>{{ stage.total }}</span></div>
+          @if (stage.orders.length) {
+            <ul>
+              @for (order of stage.orders; track order.id) {
+                <li>
+                  <a [routerLink]="['/ordenes']" [queryParams]="{ buscar: number(order.number) }">
+                    <span class="order-number">{{ number(order.number) }}</span>
+                    <strong>{{ order.customerName }}</strong>
+                    <span>{{ order.catalogName }}</span>
+                    <span class="delivery">Entrega: {{ date(order.deliveryLocal) }}</span>
+                    <span>{{ order.responsibleName || 'Sin responsable asignado' }}</span>
+                    <span class="order-link">Buscar orden →</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          } @else { <p class="help">No hay órdenes en esta etapa.</p> }
+          <app-pagination [label]="'Paginación de ' + label(stage.status)" [info]="stage.pagination ?? null" [busy]="loading()" (change)="changePage(stage.status, $event)" />
+        </section>
+      }
+    </div>
+  }
+</app-shell>

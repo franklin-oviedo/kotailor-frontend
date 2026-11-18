@@ -1,0 +1,180 @@
+<app-shell>
+  @if (!workshop) {
+    <h1>Pagos y cobros</h1>
+    <p role="status">Selecciona una sastrería para consultar sus cobros.</p>
+  } @else if (!canManage) {
+    <h1>Pagos y cobros</h1>
+    <p role="status">Solo propietarios y encargados pueden registrar cobros.</p>
+  } @else {
+    <div class="page-heading">
+      <div>
+        <h1>Pagos y cobros</h1>
+        <p>Controla tus ingresos sin perder un detalle.</p>
+      </div>
+    </div>
+
+    @if (error()) { <p class="error" role="alert">{{ error() }} <button type="button" class="text-button" (click)="load()">Actualizar</button></p> }
+    @if (notice()) {
+      <p class="success"><span role="status">{{ notice() }}</span>
+        @if (lastReceipt(); as id) { <a [href]="receiptUrl(id)" target="_blank" rel="noopener">Imprimir recibo</a> }
+      </p>
+    }
+
+    <section class="metrics" aria-label="Resumen de cobros">
+      <article><span>Cobrado este mes</span><strong>{{ dashboard() ? money(dashboard()!.collectedMonthCents) : '—' }}</strong>
+        @if (dashboard(); as data) {
+          @if (data.invoicesWithTax !== undefined && data.invoicesWithoutTax !== undefined) {
+            <span>Facturado con ITBIS: {{ money(data.invoicedWithTaxCents) }} · {{ data.invoicesWithTax }} facturas</span>
+            <span>Facturado sin ITBIS: {{ money(data.invoicedWithoutTaxCents) }} · {{ data.invoicesWithoutTax }} facturas</span>
+          }
+          @if (data.invoicesUnpaid !== undefined) {
+            <span>Facturas del mes: {{ data.invoicesUnpaid }} sin abonos · {{ data.invoicesPartial }} con pago parcial · {{ data.invoicesPaid }} pagadas</span>
+          }
+        }
+      </article>
+      <article><span>Pendiente de cobrar</span><strong>{{ dashboard() ? money(dashboard()!.outstandingCents) : '—' }}</strong>
+        @if (dashboard()?.outstandingByTax; as breakdown) {
+          <span>Pendiente con ITBIS: {{ money(breakdown.withTax.amountCents) }} · {{ breakdown.withTax.count }} {{ breakdown.withTax.count === 1 ? 'documento' : 'documentos' }}</span>
+          <span>Pendiente sin ITBIS: {{ money(breakdown.withoutTax.amountCents) }} · {{ breakdown.withoutTax.count }} {{ breakdown.withoutTax.count === 1 ? 'documento' : 'documentos' }}</span>
+          @if (breakdown.pendingTax.count) {
+            <span>Pendiente con ITBIS por calcular: {{ money(breakdown.pendingTax.amountCents) }} · {{ breakdown.pendingTax.count }} {{ breakdown.pendingTax.count === 1 ? 'documento' : 'documentos' }}</span>
+          }
+        }
+        @if (dashboard()?.hasPendingTax) { <span>Incluye importes con ITBIS pendiente.</span> }
+      </article>
+      <article><span>Cobrado hoy</span><strong>{{ dashboard() ? money(dashboard()!.collectedTodayCents) : '—' }}</strong>
+        @if (dashboard()?.collectedTodayByTax; as breakdown) {
+          <span>Cobrado con ITBIS: {{ money(breakdown.withTax.amountCents) }} · {{ breakdown.withTax.count }} {{ breakdown.withTax.count === 1 ? 'movimiento' : 'movimientos' }}</span>
+          <span>Cobrado sin ITBIS: {{ money(breakdown.withoutTax.amountCents) }} · {{ breakdown.withoutTax.count }} {{ breakdown.withoutTax.count === 1 ? 'movimiento' : 'movimientos' }}</span>
+          @if (breakdown.pendingTax.count) {
+            <span>Cobrado con ITBIS por calcular: {{ money(breakdown.pendingTax.amountCents) }} · {{ breakdown.pendingTax.count }} {{ breakdown.pendingTax.count === 1 ? 'movimiento' : 'movimientos' }}</span>
+          }
+        }
+      </article>
+    </section>
+
+    <div class="payments-layout">
+      <section class="movements panel" aria-labelledby="movements-heading">
+        <div class="section-heading">
+          <h2 id="movements-heading">Movimientos recientes</h2>
+          <button type="button" class="text-button" (click)="export()" [disabled]="loading() || movementLoading() || exporting() || !movements().length">Exportar ↓</button>
+        </div>
+        <div class="filters">
+          <label for="movement-month">Mes</label>
+          <select #monthSelect id="movement-month" [value]="selectedMonth()" (change)="selectedMonth.set(monthSelect.value); filterMovements()">
+            @for (month of months; track month.value) { <option [value]="month.value">{{ month.label }}</option> }
+          </select>
+          <label for="movement-method">Método</label>
+          <select #methodSelect id="movement-method" [value]="selectedMethod()" (change)="selectedMethod.set(methodSelect.value); filterMovements()">
+            <option value="all">Todos los métodos</option>
+            @for (method of methodOptions; track method.value) { <option [value]="method.value">{{ method.label }}</option> }
+          </select>
+          <label class="visually-hidden" for="movement-search">Buscar pago, factura o cliente</label>
+          <input #movementSearch id="movement-search" type="search" maxlength="120" [value]="searchTerm()" (input)="searchTerm.set(movementSearch.value); filterMovements()" placeholder="Buscar pago, factura o cliente" />
+        </div>
+
+        @if (movementError()) {
+          <p role="alert">{{ movementError() }} <button type="button" (click)="filterMovements()">Reintentar</button></p>
+        }
+        @if (loading() || (movementLoading() && !movementPage())) {
+          <p role="status">Cargando movimientos…</p>
+        } @else if (!movements().length) {
+          <p class="empty" role="status">No hay movimientos para los filtros seleccionados.</p>
+        } @else {
+          <div class="movement-table" role="table" aria-label="Movimientos de cobro">
+            <div class="movement-row movement-header" role="row">
+              <span role="columnheader">FECHA / RECIBO</span>
+              <span role="columnheader">CLIENTE / FACTURA</span>
+              <span role="columnheader">MÉTODO</span>
+              <span role="columnheader">MONTO</span>
+            </div>
+            @for (entry of movements(); track entry.id) {
+              <div class="movement-row" role="row">
+                <span role="cell">{{ date(entry.createdAt) }}<small>{{ movementReference(entry) }}</small>
+                  <small><a [href]="receiptUrl(entry.id)" target="_blank" rel="noopener">Imprimir recibo</a></small>
+                </span>
+                <span role="cell">{{ entry.customerName || 'Factura administrativa' }}<small>{{ invoiceNumber(entry.invoiceNumber) }}</small></span>
+                <span role="cell">{{ methodLabel(entry.method) }} @if (entry.kind === 'refund') { · Devolución }</span>
+                <strong role="cell" [class.refund]="entry.kind === 'refund'">{{ entry.kind === 'refund' ? '−' : '' }}{{ money(entry.amountCents) }}</strong>
+              </div>
+            }
+            <app-pagination label="Paginación de movimientos" [info]="movementPage()" [busy]="loading() || movementLoading()" (change)="changeMovementPage($event)" />
+          </div>
+        }
+        <p class="table-note">Solo se muestran cobros y devoluciones vinculados a facturas.</p>
+      </section>
+
+      <section class="register panel" aria-labelledby="register-heading">
+        <h2 id="register-heading">Registrar pago</h2>
+        <p>Asocia el abono a una orden o factura manual.</p>
+        <form [formGroup]="form" (ngSubmit)="save()">
+          <label for="payment-order">Cliente y documento</label>
+          <select id="payment-order" formControlName="documentKey" (change)="selectDocument(form.controls.documentKey.value)" required>
+            @if (uncertain()) {
+              <option [value]="form.controls.documentKey.value">Documento del cobro por confirmar</option>
+            } @else {
+              <option value="">Selecciona una orden o factura</option>
+            }
+            @if (!uncertain() && orders().length) {
+              <optgroup label="Órdenes">
+                @for (order of orders(); track order.id) {
+                  <option [value]="order.id">{{ order.customerName }} · {{ orderNumber(order.number) }} · {{ order.catalogName }}</option>
+                }
+              </optgroup>
+            }
+            @if (!uncertain() && manualInvoices().length) {
+              <optgroup label="Facturas manuales pendientes">
+                @for (invoice of manualInvoices(); track invoice.id) {
+                  <option [value]="manualKey(invoice.id)">{{ invoice.customerName }} · {{ invoiceNumber(invoice.number) }}</option>
+                }
+              </optgroup>
+            }
+          </select>
+          @if (dashboard() && !loading() && !error() && !uncertain() && !orders().length && !manualInvoices().length) {
+            <p class="help" role="status">No hay documentos con saldo disponible para abonar.</p>
+          }
+          @if (form.controls.documentKey.value) {
+            <p class="balance" role="status">
+              @let customerBalance = ledger()?.customerBalance;
+              @if (ledgerLoading()) {
+                Consultando saldo…
+              } @else if (ledger()) {
+                @let documentBalance = balanceCents();
+                @if (documentBalance !== null) {
+                  Máximo para abonar a {{ isManualSelected() ? 'esta factura' : 'esta orden' }}:
+                  <strong>{{ money(documentBalance) }}</strong>
+                } @else {
+                  No se puede abonar a esta orden hasta determinar su total.
+                }
+                @if (customerBalance) {
+                  <br />Saldo total del cliente (todas sus órdenes y facturas): {{ money(customerBalance.outstandingCents) }}
+                  @if (customerBalance.hasPendingTax) {
+                    <br />El saldo total incluye importes con ITBIS pendiente y puede aumentar.
+                  }
+                }
+              } @else {
+                No se pudo consultar el saldo.
+              }
+            </p>
+          }
+          <label for="payment-amount">Monto recibido (DOP)</label>
+          <input id="payment-amount" type="text" inputmode="decimal" formControlName="amount" required
+            [attr.aria-invalid]="form.controls.amount.touched && form.controls.amount.invalid ? 'true' : null" aria-describedby="payment-help" />
+          <p id="payment-help" class="help">Ejemplos: 4998.00, 4998,00 o RD$4,998.00.</p>
+          <label for="payment-method">Método de pago</label>
+          <select id="payment-method" formControlName="method">
+            @for (method of methodOptions; track method.value) { <option [value]="method.value">{{ method.label }}</option> }
+          </select>
+          @if (form.controls.method.value === methods.Transfer) {
+            <label for="payment-reference">Referencia bancaria</label>
+            <input id="payment-reference" type="text" maxlength="120" formControlName="reference" />
+          }
+          <p class="receipt-note">El recibo registra el cobro; no sustituye una factura fiscal.</p>
+          <button class="primary full" type="submit" [disabled]="loading() || saving() || balanceCents() === null || balanceCents() === 0">
+            {{ saving() ? 'Confirmando…' : 'Confirmar pago' }}
+          </button>
+        </form>
+      </section>
+    </div>
+  }
+</app-shell>

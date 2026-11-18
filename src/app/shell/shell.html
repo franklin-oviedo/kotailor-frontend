@@ -1,0 +1,72 @@
+@if (auth.session(); as session) {
+  <div class="shell">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <div class="logo"><img ngSrc="assets/access-logo-desktop.png" width="2172" height="724" alt="Logo institucional" priority /></div>
+      <p class="nav-caption">GESTIÓN DE LA SASTRERÍA</p>
+      <nav aria-label="Secciones de la sastrería">
+        <a class="nav-item" routerLink="/inicio" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/home.svg" width="20" height="20" alt="" />Inicio</a>
+        <a class="nav-item" routerLink="/clientes" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/users.svg" width="20" height="20" alt="" />Clientes</a>
+        <a class="nav-item" routerLink="/ordenes" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/order.svg" width="20" height="20" alt="" />Órdenes</a>
+        <a class="nav-item" routerLink="/prendas" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/garment.svg" width="20" height="20" alt="" />Prendas</a>
+        <a class="nav-item" routerLink="/produccion" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/production.svg" width="20" height="20" alt="" />Producción</a>
+        <a class="nav-item" routerLink="/agenda" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/calendar.svg" width="20" height="20" alt="" />Agenda y entregas</a>
+        @if (auth.currentWorkshop()?.role === roles.Owner || auth.currentWorkshop()?.role === roles.Manager) {
+          <a class="nav-item" routerLink="/pagos" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/payments.svg" width="20" height="20" alt="" />Pagos y cobros</a>
+        }
+        @if (auth.currentWorkshop()?.role === roles.Owner || auth.currentWorkshop()?.role === roles.Manager) {
+          <a class="nav-item" routerLink="/facturacion" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/billing.svg" width="20" height="20" alt="" />Facturación</a>
+        }
+        @if (auth.currentWorkshop()?.role === roles.Owner || auth.currentWorkshop()?.role === roles.Manager) {
+          <a class="nav-item" routerLink="/reportes" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/reports.svg" width="20" height="20" alt="" />Reportes</a>
+        }
+        @if (auth.currentWorkshop()?.role === roles.Owner) {
+          <a class="nav-item" routerLink="/configuracion-fiscal" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/settings.svg" width="20" height="20" alt="" />Configuración fiscal</a>
+        }
+      </nav>
+      <div class="sidebar-help"><strong>¿Necesitas una mano?</strong><a routerLink="/ayuda">Centro de ayuda ↗</a></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="mobile-logo logo"><img ngSrc="assets/access-logo-desktop.png" width="2172" height="724" alt="Logo institucional" priority /></div>
+        <div class="workshop-name">
+          @if (session.workshops.length > 1) {
+            <a routerLink="/seleccionar-taller">{{ auth.currentWorkshop()?.name || 'Seleccionar sastrería' }} · Cambiar</a>
+          } @else if (session.workshops.length === 1) {
+            <strong>{{ session.workshops[0].name }}</strong>
+            <span class="mobile-workshop-label">Sastrería</span>
+          } @else {
+            <strong>Sin sastrería asociada</strong>
+          }
+        </div>
+        <div class="search-placeholder"><img ngSrc="assets/search.svg" width="20" height="20" alt="" /><span>Buscar cliente, orden o factura</span></div>
+        <button class="notifications" type="button" aria-label="Notificaciones" (click)="unavailable('Notificaciones')"><img ngSrc="assets/notifications.svg" width="20" height="20" alt="" /></button>
+        <div class="user">
+          <div class="user-copy"><span>{{ session.user.name }}</span><small>{{ roleLabel() }}</small></div>
+          <div class="user-menu">
+            <button class="user-menu-trigger" type="button" aria-label="Opciones de usuario" [attr.aria-expanded]="userMenuOpen()" [attr.aria-controls]="userMenuOpen() ? 'user-menu' : null" (click)="toggleUserMenu()">⌄</button>
+            @if (userMenuOpen()) {
+              <div class="user-menu-popover" id="user-menu">
+                <button type="button" [disabled]="loggingOut()" (click)="logout()">{{ loggingOut() ? 'Cerrando sesión…' : 'Cerrar sesión' }}</button>
+              </div>
+            }
+          </div>
+        </div>
+      </header>
+      <main class="content">
+        <ng-content />
+        <p class="shell-notice notice" role="status" aria-live="polite">{{ notice() }}</p>
+      </main>
+      @if (moreOpen()) {
+        <div class="mobile-more" id="mobile-more"><a routerLink="/clientes" (click)="moreOpen.set(false)">Clientes</a><a routerLink="/prendas" (click)="moreOpen.set(false)">Prendas</a><a routerLink="/produccion" (click)="moreOpen.set(false)">Producción</a>@if (auth.currentWorkshop()?.role === roles.Owner || auth.currentWorkshop()?.role === roles.Manager) { <a routerLink="/pagos" (click)="moreOpen.set(false)">Pagos y cobros</a><a routerLink="/facturacion" (click)="moreOpen.set(false)">Facturación</a><a routerLink="/reportes" (click)="moreOpen.set(false)">Reportes</a> }
+          @if (auth.currentWorkshop()?.role === roles.Owner) { <a routerLink="/configuracion-fiscal" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="moreOpen.set(false)">Configuración fiscal</a> }
+          @if (session.platformAdministrator || auth.currentWorkshop()?.role === roles.Owner) { <a routerLink="/administrar-invitaciones" (click)="moreOpen.set(false)">Invitaciones</a> }@if (auth.currentWorkshop()?.role === roles.Owner || auth.currentWorkshop()?.role === roles.Manager) { <a routerLink="/invitar-cliente" (click)="moreOpen.set(false)">Invitar cliente</a> }@if (session.canCreateWorkshop) { <a routerLink="/crear-taller" (click)="moreOpen.set(false)">Crear sastrería</a> }<a routerLink="/portal/inicio" (click)="moreOpen.set(false)">Portal del cliente</a><a routerLink="/ayuda" (click)="moreOpen.set(false)">Centro de ayuda</a><button type="button" [disabled]="loggingOut()" (click)="logout()">{{ loggingOut() ? 'Cerrando sesión…' : 'Cerrar sesión' }}</button></div>
+      }
+      <nav class="mobile-navigation" aria-label="Navegación móvil">
+        <a routerLink="/inicio" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/mobile-home.svg" width="20" height="20" alt="" />Inicio</a>
+        <a routerLink="/ordenes" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/mobile-order.svg" width="20" height="20" alt="" />Órdenes</a>
+        <a routerLink="/agenda" routerLinkActive="active" ariaCurrentWhenActive="page"><img ngSrc="assets/mobile-calendar.svg" width="20" height="20" alt="" />Agenda</a>
+        <button type="button" [class.active]="router.url.startsWith('/prendas') || router.url.startsWith('/clientes') || router.url.startsWith('/produccion') || router.url.startsWith('/pagos') || router.url.startsWith('/facturacion') || router.url.startsWith('/reportes') || router.url.startsWith('/configuracion-fiscal')" [attr.aria-controls]="moreOpen() ? 'mobile-more' : null" [attr.aria-expanded]="moreOpen()" (click)="toggleMore()"><img ngSrc="assets/mobile-settings.svg" width="20" height="20" alt="" />Más</button>
+      </nav>
+    </div>
+  </div>
+}

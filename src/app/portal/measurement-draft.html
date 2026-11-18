@@ -1,0 +1,61 @@
+<app-portal-header [userName]="auth.session()?.user?.name || ''" [loggingOut]="loggingOut()"
+  (signOut)="logout()" (unavailable)="unavailable($event)" />
+<main>
+  <a [routerLink]="['/portal/medidas']" [queryParams]="{ taller: workshopId }">← Volver a mis medidas</a>
+  @if (loading()) {
+    <p role="status">Cargando borrador…</p>
+  } @else if (!data()) {
+    <p class="error" role="alert">{{ error() }}</p>
+    <button class="secondary" type="button" (click)="load()">Reintentar</button>
+  } @else if (data(); as draft) {
+    <h1>{{ draft.garment.label }}</h1>
+    <p class="subtitle">{{ draft.garment.fields.length }} campos · Unidad: cm</p>
+    <section class="info" aria-labelledby="origin-title">
+      <h2 id="origin-title">Origen: ingresadas por ti · Borrador personal · No verificadas</h2>
+      <p>Solo tú puedes editar este borrador. Al confirmar el envío, se comparte con el personal autorizado de {{ draft.workshopName }}.</p>
+    </section>
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="layout">
+        <fieldset class="fields" [disabled]="saving() || reviewing()">
+          <legend class="visually-hidden">Medidas en centímetros</legend>
+          @for (field of draft.garment.fields; track field.key) {
+            <div>
+              <label [for]="field.key">{{ field.label }} (cm)</label>
+              <input [id]="field.key" type="number" inputmode="decimal" min="0.01" max="999.99" step="0.01"
+                [formControlName]="field.key"
+                [attr.aria-invalid]="form.controls[field.key].touched && form.controls[field.key].invalid"
+                [attr.aria-describedby]="form.controls[field.key].touched && form.controls[field.key].invalid ? field.key + '-error' : null" />
+              @if (form.controls[field.key].touched && form.controls[field.key].invalid) {
+                <p class="field-error" [id]="field.key + '-error'">Indica una medida válida con hasta dos decimales.</p>
+              }
+            </div>
+          }
+        </fieldset>
+        <aside>
+          <h2>Antes de compartir</h2>
+          <p>Usa centímetros y registra cada valor según la ficha de esta prenda. Verifica cada medida antes de enviarla.</p>
+          <p>Si no conoces una medida, no la adivines. Puedes guardar un borrador incompleto. Guarda antes de recargar o cerrar la página.</p>
+          <p>Enviar tus medidas no las verifica ni modifica órdenes. La sastrería revisará el envío.</p>
+          <button class="primary" type="button" [disabled]="saving() || conflict() || reviewing()" (click)="review()">Revisar y enviar a la sastrería</button>
+          <button class="secondary" type="submit" [disabled]="saving() || conflict() || reviewing()">{{ saving() ? 'Guardando…' : 'Guardar borrador personal' }}</button>
+          @if ((form.dirty || conflict()) && !reviewing()) {
+            <button class="secondary" type="button" [disabled]="saving()" (click)="discard()">{{ conflict() ? 'Descartar y cargar versión actual' : 'Descartar cambios' }}</button>
+          }
+        </aside>
+      </div>
+      @if (reviewing()) {
+        <section class="review" aria-labelledby="review-title">
+          <h2 id="review-title">Revisa antes de enviar</h2>
+          <p>Compartirás estas medidas con {{ draft.workshopName }}. No quedarán verificadas automáticamente.</p>
+          <dl>@for (field of draft.garment.fields; track field.key) {
+            <div><dt>{{ field.label }}</dt><dd>{{ draft.measurements[field.key] }} cm</dd></div>
+          }</dl>
+          <button class="primary" type="button" [disabled]="submitting()" (click)="submit()">{{ submitting() ? 'Enviando…' : 'Confirmar envío' }}</button>
+          <button class="secondary" type="button" [disabled]="submitting()" (click)="reviewing.set(false)">Volver a editar</button>
+        </section>
+      }
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+    </form>
+  }
+</main>

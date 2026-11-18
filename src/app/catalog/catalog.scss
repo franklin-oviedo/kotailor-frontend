@@ -1,0 +1,42 @@
+:host { display: block; color: #16343c; }
+h1 { margin: 0; font-size: 30px; line-height: 1.45; }
+.subtitle { margin: 4px 0 32px; color: #61666a; font-size: 13px; }
+.heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+form, .list { max-width: 700px; }
+label { display: block; margin: 0 0 8px; color: #61666a; font-size: 12px; }
+input:not([type='checkbox']), select, textarea {
+  box-sizing: border-box; width: 100%; min-height: 46px; padding: 12px;
+  border: 1px solid #cfdadd; border-radius: 6px; background: white; color: #16343c;
+  font: inherit; font-size: 13px;
+}
+form > input, form > select, form > textarea { margin-bottom: 20px; }
+textarea { resize: vertical; }
+button { font: inherit; cursor: pointer; }
+.primary, .secondary { min-height: 48px; padding: 0 20px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+.primary { border: 1px solid #005d74; background: #005d74; color: white; }
+.secondary { border: 1px solid #cfdadd; background: white; color: #005d74; }
+button:disabled { opacity: .6; cursor: not-allowed; }
+form > button { display: block; width: 100%; margin-top: 16px; }
+fieldset { margin: 24px 0; padding: 0; border: 0; }
+legend { font-size: 17px; font-weight: 600; }
+.template-summary { margin: 16px 0 0; color: #005d74; font-size: 13px; font-weight: 500; }
+.configure { padding: 4px 0; border: 0; background: transparent; color: #005d74; font-size: 13px; font-weight: 500; text-decoration: underline; }
+.checkbox { display: flex; align-items: center; gap: 8px; margin: 12px 0; color: #16343c; font-size: 13px; }
+.checkbox input { width: 18px; height: 18px; }
+.help { color: #61666a; font-size: 12px; line-height: 1.45; }
+form > .help { margin: -12px 0 20px; }
+.items { display: grid; gap: 18px; padding: 0; margin: 24px 0; list-style: none; }
+.items .item { position: relative; display: grid; gap: 10px; width: 100%; min-height: 115px; padding: 11px 40px 14px 14px; background: white; border: 1px solid #e2e9eb; border-radius: 9px; color: inherit; text-align: left; overflow-wrap: anywhere; }
+.items strong { font-size: 17px; }
+.items span { font-size: 12px; color: #61666a; }
+.items .price { color: #005d74; font-size: 13px; font-weight: 500; }
+.items .arrow { position: absolute; top: 50%; right: 16px; transform: translateY(-50%); color: #005d74; font-size: 17px; }
+.error { color: #a32020; }
+.success { color: #17613c; }
+.mobile-add { display: none; }
+@media (max-width: 767px) {
+  h1 { font-size: 26px; }
+  .desktop-add { display: none; }
+  .mobile-add { display: block; width: 100%; margin-top: 40px; }
+  .list > .help { margin-top: 24px; }
+}

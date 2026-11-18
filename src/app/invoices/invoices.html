@@ -1,0 +1,302 @@
+<app-shell>
+  <p class="disclaimer" role="note">Las facturas generadas aquí son documentos administrativos. No constituyen comprobantes fiscales autorizados por la DGII ni generan NCF/e-CF.</p>
+  <p class="help">Entorno en desarrollo: no introduzcas datos reales de facturación todavía.</p>
+  @if (!workshop) {
+    <h1 #heading tabindex="-1">Facturación</h1>
+    <p role="status">Selecciona una sastrería para administrar facturas.</p>
+  } @else if (fiscalSettings && !canConfigure) {
+    <h1 #heading tabindex="-1">Configuración fiscal</h1>
+    <p role="status">Solo el propietario de la sastrería puede modificar la configuración fiscal.</p>
+    <a class="text-button" routerLink="/facturacion">← Facturación</a>
+  } @else if (!canManage) {
+    <h1 #heading tabindex="-1">Facturación administrativa</h1>
+    <p role="status">Solo propietarios y encargados de la sastrería pueden consultar y administrar facturas.</p>
+  } @else {
+    <div class="page-heading">
+      <div>
+        @if (view() === 'list') { <h1 #heading tabindex="-1">Facturación administrativa</h1> }
+        @if (view() === 'create') { <h1 #heading tabindex="-1">{{ detail() ? 'Editar borrador' : 'Nueva factura' }}</h1> }
+        @if (view() === 'detail') { <h1 #heading tabindex="-1">Factura {{ detail() ? invoiceNumber(detail()!.number) : '' }}</h1> }
+        @if (view() === 'profile') { <h1 #heading tabindex="-1">Configuración fiscal</h1> }
+        <p class="subtitle">Documentos administrativos internos de la sastrería.</p>
+      </div>
+      @if (view() === 'list') {
+        <div class="heading-actions">
+          @if (canConfigure) { <a class="secondary link-button" routerLink="/configuracion-fiscal">Perfil de la sastrería</a> }
+          <button class="primary" type="button" (click)="showCreate()">+ Nueva factura</button>
+        </div>
+      }
+    </div>
+
+    @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+    @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+
+    @if (view() === 'list') {
+      <section class="list-panel" aria-label="Facturas de la sastrería">
+        <form class="search" (ngSubmit)="searchInvoices()">
+          <label for="invoice-search">Buscar por factura (FA-), orden (OT-) o cliente</label>
+          <input id="invoice-search" type="search" [formControl]="search" maxlength="120" />
+          <button class="secondary" type="submit">Buscar</button>
+          <label for="invoice-status">Estado de factura</label>
+          <select id="invoice-status" [formControl]="statusFilter" (change)="searchInvoices()">
+            <option value="">Todos los estados</option>
+            @for (status of statusOptions; track status) {
+              <option [value]="status">{{ statusLabels[status] }}</option>
+            }
+          </select>
+        </form>
+        @if (loading()) {
+          <p role="status">Cargando facturas…</p>
+        } @else if (!rows().length && !error()) {
+          <p class="empty" role="status">{{ appliedFilters().search || appliedFilters().status
+            ? 'No hay facturas que coincidan con los filtros.'
+            : 'Aún no hay facturas. Puedes crear una factura administrativa desde una orden o manualmente.' }}</p>
+        } @else {
+          <ul class="invoice-list">
+            @for (invoice of rows(); track invoice.id) {
+              <li>
+                <button class="invoice-row" type="button" (click)="openInvoice(invoice.id)">
+                  <span class="invoice-number">{{ invoiceNumber(invoice.number) }}</span>
+                  <span><strong>{{ invoice.customer.name }}</strong>
+                    @if (invoice.orderNumber != null) { <small>Orden {{ orderNumber(invoice.orderNumber) }}</small> }
+                    <small>Emisión {{ date(invoice.issueDate) }}</small><small>{{ taxLabel(invoice.hasTax, invoice.taxBasisPoints) }}@if (invoice.hasTax && invoice.taxCents !== null) { · {{ money(invoice.taxCents) }} }</small>
+                  </span>
+                  <span class="status" [class.draft]="invoice.status === statuses.Draft || invoice.displayStatus === partialStatus" [class.void]="invoice.status === statuses.Void">{{ statusLabels[invoice.displayStatus] }}</span>
+                  <span class="amount">{{ invoice.totalCents === null ? 'ITBIS sin configurar' : money(invoice.totalCents) }}</span>
+                  <span class="arrow" aria-hidden="true">→</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+        <app-pagination [info]="pagination()" [busy]="loading()" label="Paginación de facturas" (change)="changePage($event)" />
+      </section>
+    }
+
+    @if (view() === 'create') {
+      <button class="text-button" type="button" (click)="detail() ? openInvoice(detail()!.id) : showList()">← Volver</button>
+      @if (loading()) { <p role="status">Cargando clientes y órdenes…</p> }
+      <form class="invoice-form" [formGroup]="form" (ngSubmit)="createOrUpdate()" novalidate>
+        @if (!detail()) {
+          <label for="invoice-source">Origen de la factura</label>
+          <select id="invoice-source" [formControl]="source">
+            <option value="manual">Factura manual</option>
+            <option value="order">Desde una orden</option>
+          </select>
+        }
+        @if (!detail() && source.value === 'manual') {
+          <label for="invoice-customer">Cliente *</label>
+          <select id="invoice-customer" [formControl]="form.controls.customerId" required>
+            <option value="">Selecciona un cliente</option>
+            @for (customer of customers(); track customer.id) { <option [value]="customer.id">{{ customer.name }} · {{ customer.phone }}</option> }
+          </select>
+        }
+        @if (!detail() && source.value === 'order') {
+          <label for="invoice-order">Orden *</label>
+          <select id="invoice-order" [formControl]="form.controls.orderId" required>
+            <option value="">Selecciona una orden</option>
+            @for (order of orders(); track order.id) { <option [value]="order.id">{{ orderNumber(order.number) }} · {{ order.customerName }} · {{ order.catalogName }}</option> }
+          </select>
+          <p class="help">Se usa el ITBIS registrado en la orden. Los cobros existentes se conservan y no se duplican.</p>
+          @if (selectedOrder(); as order) {
+            <p class="help">{{ taxLabel(order.taxTreatment === taxable, order.taxBasisPoints) }}</p>
+            <dl class="totals">
+              <div><dt>Subtotal</dt><dd>{{ money(order.subtotalCents) }}</dd></div>
+              @if (order.taxTreatment === taxable) { <div><dt>ITBIS</dt><dd>{{ order.taxCents === null ? 'Sin calcular' : money(order.taxCents) }}</dd></div> }
+              <div class="grand-total"><dt>Total</dt><dd>{{ order.taxCents === null ? 'Sin calcular' : money(order.subtotalCents + order.taxCents) }}</dd></div>
+            </dl>
+          }
+        }
+        @if (detail()) {
+          <p class="readonly-customer"><strong>Cliente:</strong> {{ detail()!.customer.name }}</p>
+        }
+        <div class="date-grid">
+          <div><label for="invoice-issue-date">Fecha de emisión *</label><input id="invoice-issue-date" type="date" [formControl]="form.controls.issueDate" [readOnly]="!!detail()" required /></div>
+          <div><label for="invoice-due-date">Fecha de vencimiento</label><input id="invoice-due-date" type="date" [formControl]="form.controls.dueDate" /></div>
+        </div>
+        @if (source.value === 'manual' && !hasFixedAmounts(detail())) {
+          @if (profile()?.allowInvoicesWithoutTax || taxMode.value === taxModes.WithoutTax) {
+            <label for="invoice-tax-mode">Tipo de facturación</label>
+            <select id="invoice-tax-mode" [formControl]="taxMode">
+              <option [value]="taxModes.WithTax">Factura con ITBIS</option>
+              <option [value]="taxModes.WithoutTax" [disabled]="!profile()?.allowInvoicesWithoutTax">Factura sin ITBIS</option>
+            </select>
+            <p class="help">Emite sin ITBIS solo cuando no corresponda cobrarlo.</p>
+          }
+          <fieldset class="line-items">
+            <legend>Conceptos</legend>
+            @for (line of lines.controls; track $index) {
+              <div class="line-editor" [formGroup]="line">
+                <label [for]="'line-description-' + $index">Descripción *</label>
+                <input [id]="'line-description-' + $index" formControlName="description" maxlength="500" required />
+                <div class="line-grid">
+                  <div><label [for]="'line-quantity-' + $index">Cantidad *</label><input [id]="'line-quantity-' + $index" formControlName="quantity" inputmode="decimal" required /></div>
+                  <div><label [for]="'line-price-' + $index">Precio unitario (DOP) *</label><input [id]="'line-price-' + $index" formControlName="unitPrice" inputmode="decimal" required /></div>
+                  <div><label [for]="'line-discount-' + $index">Descuento (DOP)</label><input [id]="'line-discount-' + $index" formControlName="discount" inputmode="decimal" /></div>
+                </div>
+                @if (lines.length > 1) { <button class="remove-line" type="button" (click)="removeLine($index)">Eliminar concepto {{ $index + 1 }}</button> }
+              </div>
+            }
+            @if (!detail()) { <button class="secondary" type="button" (click)="addLine()">+ Agregar concepto</button> }
+          </fieldset>
+          @let preview = manualPreview();
+          <dl class="totals">
+            <div><dt>Subtotal estimado</dt><dd>{{ money(preview.subtotal) }}</dd></div>
+            @if (taxMode.value === taxModes.WithTax) { <div><dt>ITBIS estimado</dt><dd>{{ preview.tax === null ? 'Sin calcular' : money(preview.tax) }}</dd></div> }
+            <div class="grand-total"><dt>Total estimado</dt><dd>{{ preview.total === null ? 'Sin calcular' : money(preview.total) }}</dd></div>
+          </dl>
+          @if (taxMode.value === taxModes.WithTax && profile()?.itbisBasisPoints === null) {
+            <p class="warning" role="note">Falta configurar la tasa de ITBIS. Los conceptos gravados quedarán con impuesto sin calcular y el borrador no podrá emitirse mientras falte ese cálculo.</p>
+          }
+        } @else if (detail(); as linked) {
+          <p class="help">{{ taxLabel(linked.hasTax, linked.taxBasisPoints) }} · {{ linked.orderId
+            ? 'Se conservan los conceptos e importes de la orden.'
+            : 'Se conservan los importes históricos de esta factura con conceptos gravados y exentos.' }}</p>
+        }
+        <label for="invoice-terms">Términos y condiciones</label>
+        <textarea id="invoice-terms" [formControl]="form.controls.terms" rows="3" maxlength="2000"></textarea>
+        <label for="invoice-notes">Notas</label>
+        <textarea id="invoice-notes" [formControl]="form.controls.notes" rows="3" maxlength="4000"></textarea>
+        <p class="help">El número interno se asigna al crear el borrador y no se reutiliza, incluso si luego se anula.</p>
+        <button class="primary full" type="submit" [disabled]="saving() || loading()">{{ saving() ? 'Guardando…' : detail() ? 'Guardar borrador' : 'Crear borrador' }}</button>
+        <button class="secondary full" type="button" [disabled]="saving()" (click)="detail() ? openInvoice(detail()!.id) : showList()">Cancelar</button>
+      </form>
+    }
+
+    @if (view() === 'detail') {
+      <button class="text-button" type="button" (click)="showList()">← Todas las facturas</button>
+      @if (loading()) { <p role="status">Cargando factura…</p> }
+      @if (detail(); as invoice) {
+        <section class="invoice-card" aria-labelledby="invoice-summary-title">
+          <div class="invoice-card-heading"><div><p class="eyebrow">DOCUMENTO ADMINISTRATIVO</p><h2 id="invoice-summary-title">{{ invoiceNumber(invoice.number) }}</h2></div>
+            <span class="status" [class.draft]="invoice.status === statuses.Draft || invoice.displayStatus === partialStatus" [class.void]="invoice.status === statuses.Void">{{ statusLabels[invoice.displayStatus] }}</span>
+          </div>
+          <p class="fiscal-warning">NO CONSTITUYE UN COMPROBANTE FISCAL AUTORIZADO POR LA DGII</p>
+          @if (invoice.status !== statuses.Draft && invoice.fiscalDataMissing?.length) {
+            <p class="warning" role="note">Este documento se emitió sin registrar: {{ invoice.fiscalDataMissing?.join(', ') }}.
+              El PDF y el ticket conservan esa información histórica. La configuración fiscal actual solo se aplica a nuevas emisiones; no modifica facturas ya emitidas.</p>
+          }
+          @if (invoice.status !== statuses.Draft) {
+            <p class="help">El PDF y el ticket utilizan los datos fiscales, logo y sello guardados al emitir esta factura.</p>
+          }
+          <div class="invoice-meta"><p><strong>Cliente</strong><span>{{ invoice.customer.name }}</span></p><p><strong>Fecha de emisión</strong><span>{{ date(invoice.issueDate) }}</span></p>
+            <p><strong>Vencimiento</strong><span>{{ invoice.dueDate ? date(invoice.dueDate) : 'No especificado' }}</span></p>
+            @if (invoice.orderNumber != null) { <p><strong>Orden asociada</strong><span>{{ orderNumber(invoice.orderNumber) }}</span></p> }
+          </div>
+          <div class="concepts" aria-label="Conceptos facturados">
+            @for (line of invoice.lines; track $index) {
+              <article class="concept">
+                <div><strong>{{ line.description }}</strong><small>{{ line.quantityMilli / 1000 }} × {{ money(line.unitPriceCents) }}</small></div>
+                <span>{{ line.taxCents === null ? 'ITBIS no calculado' : money(line.subtotalCents + line.taxCents) }}</span>
+              </article>
+            }
+          </div>
+          <p class="help">{{ taxLabel(invoice.hasTax, invoice.taxBasisPoints) }}</p>
+          <dl class="totals"><div><dt>Subtotal</dt><dd>{{ money(invoice.subtotalCents) }}</dd></div>
+            @if (invoice.hasTax) { <div><dt>ITBIS</dt><dd>{{ invoice.taxCents === null ? 'Sin calcular' : money(invoice.taxCents) }}</dd></div> }
+            <div class="grand-total"><dt>Total</dt><dd>{{ invoice.totalCents === null ? 'Sin calcular' : money(invoice.totalCents) }}</dd></div>
+            @if (invoice.status === statuses.Issued) {
+              <div><dt>Pagado</dt><dd>{{ money(invoice.paidCents) }}</dd></div>
+              @if (invoice.balanceCents != null) { <div><dt>Saldo pendiente</dt><dd>{{ money(invoice.balanceCents) }}</dd></div> }
+            }
+          </dl>
+          @if (invoice.terms) { <section class="text-block"><h3>Términos</h3><p>{{ invoice.terms }}</p></section> }
+          @if (invoice.notes) { <section class="text-block"><h3>Notas</h3><p>{{ invoice.notes }}</p></section> }
+          @if (invoice.voidReason) { <p class="warning">Motivo de anulación: {{ invoice.voidReason }}</p> }
+          <div class="detail-actions">
+            @if (invoice.status !== statuses.Draft) {
+              <a class="secondary link-button" [href]="pdfUrl(invoice)" download>Descargar PDF</a>
+              <a class="secondary link-button" [href]="pdfUrl(invoice, true)" target="_blank" rel="noopener">Ver e imprimir PDF</a>
+              <a class="secondary link-button" [href]="ticketUrl(invoice)" target="_blank" rel="noopener">Imprimir ticket</a>
+            }
+            @if (invoice.status === statuses.Draft) {
+              <button class="secondary" type="button" (click)="editDraft(invoice)">Editar borrador</button>
+              <button class="primary" type="button" [disabled]="saving() || invoice.totalCents === null" (click)="issue()">Emitir factura</button>
+            }
+          </div>
+          @if (invoice.status === statuses.Draft && invoice.totalCents === null) {
+            <p class="warning" role="note">{{ invoice.orderId
+              ? 'La orden no tiene un cálculo de ITBIS para los conceptos gravados. La tasa actual de la sastrería no sustituye la tasa histórica de la orden.'
+              : 'No se puede emitir un borrador gravado sin calcular el ITBIS. Configura la tasa y vuelve a guardar el borrador.' }}</p>
+          }
+          @if (invoice.status === statuses.Draft || invoice.status === statuses.Issued) {
+            <form class="void-form" (submit)="$event.preventDefault(); voidInvoice()" novalidate>
+              <label for="void-reason">Anular factura · motivo requerido</label>
+              <textarea id="void-reason" [formControl]="voidReason" maxlength="1000" rows="2"></textarea>
+              <button class="danger" type="submit" [disabled]="saving()">Anular</button>
+            </form>
+          }
+        </section>
+        @if (invoice.status === statuses.Issued) {
+          <section class="panel payments-panel"><h2>Cobros y devoluciones</h2><app-order-payments [workshopId]="workshop!.id" [invoiceId]="invoice.id" (invoiceCollectionLoaded)="updateInvoiceCollection($event)" /></section>
+        }
+        <section class="panel revisions"><h2>Historial de cambios</h2>
+          <ul>@for (revision of invoice.revisions; track revision.revision) {
+            <li><span>Revisión {{ revision.revision }} · {{ revision.kind }} · {{ revision.changedByName }}
+              @if (revision.snapshot?.hasTax !== undefined) { · {{ taxLabel(revision.snapshot!.hasTax!, revision.snapshot!.taxBasisPoints) }} }
+            </span><time [attr.datetime]="revision.changedAt">{{ date(revision.changedAt) }}</time></li>
+          }</ul>
+          <app-pagination label="Paginación del historial de factura" [info]="revisionsPage()" [busy]="loading()" (change)="openInvoice(invoice.id, $event)" />
+        </section>
+      }
+    }
+
+    @if (view() === 'profile') {
+      <a class="text-button" routerLink="/facturacion">← Facturas</a>
+      @if (profile(); as billing) {
+        <form class="invoice-form profile-form" aria-label="Preferencia de facturación" (submit)="$event.preventDefault(); saveInvoiceTaxSettings()">
+          <label><input class="inline-checkbox" type="checkbox" [formControl]="allowWithoutTax" aria-describedby="invoice-mode-help" /> Permitir facturas sin ITBIS</label>
+          <p id="invoice-mode-help" class="help">Aplica a facturas manuales. Las facturas desde órdenes conservan su tratamiento original.</p>
+          <button class="primary full" type="submit" [disabled]="saving()">Guardar preferencia de facturación</button>
+        </form>
+        <form class="invoice-form profile-form" aria-label="Tasa de ITBIS" (submit)="$event.preventDefault(); saveTaxRate()" novalidate>
+          <label for="billing-tax-rate">Tasa de ITBIS de la sastrería (%)</label>
+          <input id="billing-tax-rate" [formControl]="taxRate" inputmode="decimal" aria-describedby="billing-tax-help"
+            [attr.aria-invalid]="taxRate.touched && taxRate.invalid ? 'true' : null" />
+          <p id="billing-tax-help" class="help">Deja el campo vacío si la tasa aún no está configurada. Una tasa vacía no equivale a 0 %. Guardar la tasa no modifica las órdenes existentes.</p>
+          <button class="primary full" type="submit" [disabled]="saving()">Guardar tasa de ITBIS</button>
+          @if (billing.itbisBasisPoints !== null) {
+            <details>
+              <summary>Aplicar ITBIS a órdenes pendientes</summary>
+              <p id="pending-itbis-help" class="help">Se aplicará la tasa guardada de {{ billing.itbisBasisPoints / 100 }} % a todas las órdenes gravadas sin cálculo de la sastrería. Esto actualizará sus saldos y facturas administrativas en borrador. Las facturas emitidas y órdenes ya calculadas no cambiarán.</p>
+              <button class="secondary" type="button" aria-describedby="pending-itbis-help" [disabled]="saving() || taxRate.dirty" (click)="applyPendingOrderTax()">Confirmar ajuste por lote</button>
+              @if (taxRate.dirty) { <p class="help">Guarda la tasa antes de confirmar el ajuste.</p> }
+            </details>
+          }
+        </form>
+        <form class="invoice-form profile-form" [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+          <p class="help">Pulsa «Guardar perfil» para guardar los datos, el logo y el sello juntos. Se copiarán al emitir cada factura; las facturas ya emitidas no cambiarán.</p>
+          <label for="legal-name">Nombre o razón social</label><input id="legal-name" [formControl]="profileForm.controls.legalName" maxlength="200" [readOnly]="saving()" />
+          <label for="trade-name">Nombre comercial *</label><input id="trade-name" [formControl]="profileForm.controls.tradeName" maxlength="200" [readOnly]="saving()" required aria-describedby="trade-name-help" [attr.aria-invalid]="profileForm.controls.tradeName.touched && profileForm.controls.tradeName.invalid ? 'true' : null" />
+          <p id="trade-name-help" class="help">Este es el nombre de la sastrería en el sistema, las facturas y los tickets.</p>
+          @if (profileForm.controls.tradeName.touched && profileForm.controls.tradeName.invalid) { <p class="error" role="alert">Escribe el nombre comercial de la sastrería (hasta 200 caracteres).</p> }
+          <label for="rnc">RNC</label><input id="rnc" [formControl]="profileForm.controls.rnc" inputmode="numeric" maxlength="11" [readOnly]="saving()" [attr.aria-describedby]="profileForm.controls.rnc.touched && profileForm.controls.rnc.invalid ? 'rnc-help rnc-error' : 'rnc-help'" [attr.aria-invalid]="profileForm.controls.rnc.touched && profileForm.controls.rnc.invalid ? 'true' : null" />
+          <p id="rnc-help" class="help">Escribe entre 9 y 11 dígitos, o déjalo vacío.</p>
+          @if (profileForm.controls.rnc.touched && profileForm.controls.rnc.invalid) { <p id="rnc-error" class="error" role="alert">El RNC debe contener entre 9 y 11 dígitos, sin espacios ni guiones.</p> }
+          <label for="fiscal-address">Dirección fiscal</label><textarea id="fiscal-address" [formControl]="profileForm.controls.fiscalAddress" maxlength="500" [readOnly]="saving()"></textarea>
+          <label for="profile-phone">Teléfono</label><input id="profile-phone" type="tel" [formControl]="profileForm.controls.phone" maxlength="30" [readOnly]="saving()" [attr.aria-describedby]="profileForm.controls.phone.touched && profileForm.controls.phone.invalid ? 'profile-phone-error' : null" [attr.aria-invalid]="profileForm.controls.phone.touched && profileForm.controls.phone.invalid ? 'true' : null" />
+          @if (profileForm.controls.phone.touched && profileForm.controls.phone.invalid) { <p id="profile-phone-error" class="help" role="alert">Indica de 10 a 15 dígitos, o déjalo vacío.</p> }
+          <label for="profile-email">Correo electrónico</label><input id="profile-email" type="email" [formControl]="profileForm.controls.email" maxlength="254" [readOnly]="saving()" [attr.aria-describedby]="profileForm.controls.email.touched && profileForm.controls.email.invalid ? 'profile-email-error' : null" [attr.aria-invalid]="profileForm.controls.email.touched && profileForm.controls.email.invalid ? 'true' : null" />
+          @if (profileForm.controls.email.touched && profileForm.controls.email.invalid) { <p id="profile-email-error" class="error" role="alert">Escribe un correo electrónico válido, por ejemplo contacto@empresa.com.</p> }
+          <label for="invoice-logo">Logo empresarial (PNG/JPG/JPEG, máximo 60 KB)</label>
+          <input id="invoice-logo" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" [disabled]="saving()" (change)="chooseCompanyImage($event, 'logoDataUrl')" />
+          @if (companyImages().logoDataUrl; as logo) {
+            @if (unavailableLogo() !== logo) {
+              <img [src]="logo" height="72" width="72" class="company-image" alt="Vista previa del logo empresarial" (error)="unavailableLogo.set(logo)" />
+            } @else { <p class="help" role="status">No se pudo mostrar el logo guardado. Carga una imagen válida para reemplazarlo.</p> }
+          }
+          <label for="invoice-seal">Sello empresarial (PNG/JPG/JPEG, máximo 60 KB)</label>
+          <input id="invoice-seal" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" [disabled]="saving()" (change)="chooseCompanyImage($event, 'sealDataUrl')" />
+          @if (companyImages().sealDataUrl; as seal) {
+            @if (unavailableSeal() !== seal) {
+              <img [src]="seal" height="72" width="72" class="company-image" alt="Vista previa del sello empresarial" (error)="unavailableSeal.set(seal)" />
+            } @else { <p class="help" role="status">No se pudo mostrar el sello guardado. Carga una imagen válida para reemplazarlo.</p> }
+          }
+          <button class="primary full" type="submit" [disabled]="saving()">Guardar perfil</button>
+        </form>
+      } @else if (error()) {
+        <button class="secondary" type="button" (click)="loadProfile()">Reintentar</button>
+      } @else { <p role="status">Cargando perfil…</p> }
+    }
+  }
+</app-shell>

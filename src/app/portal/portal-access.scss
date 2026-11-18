@@ -1,0 +1,30 @@
+:host { display: block; min-height: 100vh; background: #f5f8f9; color: #16343c; }
+p, h1, h2 { margin: 0; }
+main { padding: 60px 20px 80px; }
+.card { width: min(680px, 100%); min-height: 758px; margin: auto; padding: 26px 35px 30px; border: 1px solid #e2e9eb; border-radius: 10px; background: white; }
+.eyebrow { color: #005d74; font-size: 12px; font-weight: 500; }
+h1 { margin-top: 31px; font-size: 36px; font-weight: 600; line-height: 1.15; }
+.description { margin-top: 50px; color: #61666a; font-size: 15px; }
+.google { display: flex; align-items: center; justify-content: center; height: 48px; margin-top: 64px; border-radius: 6px; background: #005d74; color: white; font-size: 13px; font-weight: 600; text-decoration: none; }
+.password { margin-top: 22px; color: #61666a; font-size: 13px; }
+.scope { min-height: 130px; margin-top: 31px; padding: 16px 18px; border-radius: 10px; background: #e7f5f6; color: #005d74; }
+.scope h2 { font-size: 17px; font-weight: 600; }
+.scope p { margin-top: 12px; font-size: 13px; }
+.disclaimer { margin-top: 30px; color: #61666a; font-size: 12px; }
+.legal { margin-top: 54px; color: #61666a; font-size: 12px; }
+a { color: #005d74; }
+.pending { margin-top: 18px; color: #4d6066; font-size: 12px; }
+.error { margin-top: 16px; color: #a32b25; font-size: 13px; }
+@media (max-width: 700px) {
+  main { padding: 33px 20px 60px; }
+  .card { min-height: 0; padding: 0; border: 0; background: transparent; }
+  .eyebrow { font-size: 11px; font-weight: 600; }
+  h1 { margin-top: 30px; font-size: 29px; line-height: 1.45; }
+  .description { margin-top: 30px; font-size: 13px; }
+  .google { margin-top: 52px; }
+  .password { display: none; }
+  .scope { min-height: 169px; margin-top: 31px; padding: 15px 16px; }
+  .scope p { margin-top: 18px; font-size: 15px; }
+  .disclaimer { margin-top: 32px; }
+  .legal { margin-top: 54px; }
+}

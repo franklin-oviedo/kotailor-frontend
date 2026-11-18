@@ -1,0 +1,214 @@
+@if (demo) {
+  <main class="demo-main">
+    <p class="notice">Modo demostración · Todos los datos son ficticios.</p>
+    <ng-container [ngTemplateOutlet]="reportContent" />
+  </main>
+} @else {
+  <app-shell><ng-container [ngTemplateOutlet]="reportContent" /></app-shell>
+}
+
+<ng-template #reportContent>
+  <div class="page-heading">
+    <div>
+      <h1>Resumen ejecutivo</h1>
+      <p>{{ demo ? 'Indicadores simulados para el período seleccionado.' : 'Indicadores reales de la sastrería para el período seleccionado.' }}</p>
+    </div>
+    @if (!demo) { <a routerLink="/inicio">Volver a Inicio</a> }
+  </div>
+
+  @if (!workshop && !demo) {
+    <p class="notice" role="status">Selecciona una sastrería para consultar sus indicadores.</p>
+  } @else if (!canManage) {
+    <p class="notice" role="status">Solo propietarios y encargados pueden consultar el resumen ejecutivo.</p>
+  } @else {
+    @if (demo) {
+      <div class="scenario">
+        <label for="report-scenario">Escenario de demostración</label>
+        <select #scenarioSelect id="report-scenario" [value]="scenario()" (change)="selectScenario(scenarioSelect.value)">
+          @for (option of scenarios; track option.value) { <option [value]="option.value">{{ option.label }}</option> }
+        </select>
+      </div>
+    }
+    <form class="filters panel" [formGroup]="filters" (ngSubmit)="applyFilters()" aria-label="Filtros del resumen ejecutivo">
+      <div>
+        <label for="report-from">Desde</label>
+        <input id="report-from" type="date" formControlName="from" required />
+      </div>
+      <div>
+        <label for="report-to">Hasta</label>
+        <input id="report-to" type="date" formControlName="to" required />
+      </div>
+      <div class="customer-filter">
+        <label for="customer-search">Buscar cliente</label>
+        <input id="customer-search" type="search" [value]="customerSearch()" (input)="onCustomerSearch($event)" autocomplete="off" placeholder="Escribe al menos 2 caracteres" />
+        @if (customerSearchLoading()) { <small role="status">Buscando clientes…</small> }
+        @if (customerSearchError()) { <small class="error" role="alert">No se pudo buscar clientes.</small> }
+        @if (customerSearchCompleted() && !customers().length) { <small role="status">No se encontraron clientes.</small> }
+        @if (customerSearch().trim() && customers().length) {
+          <label for="report-customer">Coincidencias</label>
+          <select id="report-customer" formControlName="customerId">
+            <option value="">Todos los clientes</option>
+            @for (customer of customers(); track customer.id) {
+              <option [value]="customer.id">{{ customer.name }}</option>
+            }
+          </select>
+          @if (customerHasMore()) { <small>Refina la búsqueda para ver más coincidencias.</small> }
+        }
+      </div>
+      <div>
+        <label for="report-status">Estado de orden</label>
+        <select id="report-status" formControlName="status">
+          <option value="">Todos los estados</option>
+          <option [value]="orderStatuses.Received">Recibida</option>
+          <option [value]="orderStatuses.Cutting">Cortando</option>
+          <option [value]="orderStatuses.Sewing">En confección</option>
+          <option [value]="orderStatuses.Fitting">En prueba</option>
+          <option [value]="orderStatuses.Ready">Lista para entregar</option>
+          <option [value]="orderStatuses.Delivered">Entregada</option>
+        </select>
+      </div>
+      <button class="primary" type="submit" [disabled]="loading()">Aplicar filtros</button>
+    </form>
+
+    @if (error()) { <p class="error-message" role="alert">{{ error() }} <button type="button" class="text-button" (click)="load()">Reintentar</button></p> }
+    @if (loading()) { <p class="status" role="status">Cargando indicadores…</p> }
+
+    @if (report(); as data) {
+      <section class="section" aria-labelledby="general-heading">
+        <h2 id="general-heading">Resumen general</h2>
+        <div class="metrics">
+          <article><span>Ventas del período</span><strong>{{ money(data.summary.salesCents) }}</strong></article>
+          <article><span>Ingresos cobrados</span><strong>{{ money(data.summary.collectedCents) }}</strong></article>
+          <article><span>Cobros pendientes</span><strong>{{ money(data.summary.outstandingCents) }}</strong></article>
+          <article><span>Facturación administrativa</span><strong>{{ money(data.summary.invoicedCents) }}</strong>
+            <small>Con ITBIS: {{ money(data.summary.invoicedWithTaxCents) }} · {{ data.summary.invoicesWithTax }} facturas</small>
+            <small>Sin ITBIS: {{ money(data.summary.invoicedWithoutTaxCents) }} · {{ data.summary.invoicesWithoutTax }} facturas</small>
+          </article>
+          <article><span>Total de facturas emitidas</span><strong>{{ data.summary.invoicesIssued }}</strong></article>
+          <article><span>Facturas pagadas</span><strong>{{ data.summary.invoicesPaid }}</strong>@if (demo) { <small>{{ paidShare(data.summary.invoicesPaid, data.summary.invoicesIssued) }} de las emitidas</small> }</article>
+          <article><span>Órdenes activas</span><strong>{{ data.summary.activeOrders }}</strong></article>
+          <article><span>Órdenes completadas</span><strong>{{ data.summary.completedOrders }}</strong></article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="financial-heading">
+        <h2 id="financial-heading">Resumen financiero</h2>
+        <div class="metrics financial">
+          <article><span>Ingresos del año calendario hasta la fecha final</span><strong>{{ money(data.summary.annualIncomeCents) }}</strong><small>Acumulado desde enero; aplica cliente y estado seleccionados.</small></article>
+          <article><span>Facturación pendiente</span><strong>{{ money(data.summary.invoiceOutstandingCents) }}</strong>
+            <small>Sin abonos: {{ data.summary.invoicesUnpaid }} · Con pago parcial: {{ data.summary.invoicesPartial }}</small>
+          </article>
+          <article><span>Flujo neto del período</span><strong>{{ money(data.summary.collectedCents) }}</strong></article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="charts-heading">
+        <h2 id="charts-heading">Tendencias del período</h2>
+        <div class="charts">
+          <article class="panel chart" aria-labelledby="sales-heading">
+            <h3 id="sales-heading">Ventas por mes</h3>
+            @if (data.monthly.length) {
+              <div class="bars">
+                @for (month of data.monthly; track month.month) {
+                  <div class="bar-item"><span>{{ monthLabel(month.month) }}</span><div class="bar-track"><span class="bar sales" [style.width]="barWidth(month.salesCents, monthlySalesMax())"></span></div><strong>{{ money(month.salesCents) }}</strong></div>
+                }
+              </div>
+            } @else { <p class="empty">No hay ventas en el período.</p> }
+          </article>
+          <article class="panel chart" aria-labelledby="billing-heading">
+            <h3 id="billing-heading">Facturación por mes</h3>
+            @if (data.monthly.length) {
+              <div class="bars">
+                @for (month of data.monthly; track month.month) {
+                  <div class="bar-item"><span>{{ monthLabel(month.month) }}</span><div class="bar-track"><span class="bar billing" [style.width]="barWidth(month.invoicedCents, monthlyBillingMax())"></span></div><strong>{{ money(month.invoicedCents) }}</strong></div>
+                }
+              </div>
+            } @else { <p class="empty">No hay facturas en el período.</p> }
+          </article>
+          <article class="panel chart" aria-labelledby="payments-heading">
+            <h3 id="payments-heading">Cobros y devoluciones por mes</h3>
+            @if (data.monthly.length) {
+              <div class="bars">
+                @for (month of data.monthly; track month.month) {
+                  <div class="bar-item"><span>{{ monthLabel(month.month) }}</span><div class="bar-track" aria-hidden="true"><span class="bar collected" [class.negative]="month.collectedCents < 0" [style.width]="barWidth(month.collectedCents, monthlyPaymentsMax())"></span></div><strong>{{ money(month.collectedCents) }}</strong></div>
+                }
+              </div>
+            } @else { <p class="empty">No hay cobros en el período.</p> }
+          </article>
+          <article class="panel chart" aria-labelledby="orders-heading">
+            <h3 id="orders-heading">Estado de órdenes</h3>
+            @if (data.ordersByStatus.length) {
+              <div class="bars">
+                @for (item of data.ordersByStatus; track item.status) {
+                  <button class="bar-item status-bar" type="button" (click)="setStatus(item.status)" [attr.aria-pressed]="filters.controls.status.value === item.status">
+                    <span>{{ statusLabel(item.status) }}</span><div class="bar-track"><span class="bar status" [style.width]="barWidth(item.count, orderCountMax())"></span></div><strong>{{ item.count }}</strong>
+                  </button>
+                }
+              </div>
+            } @else { <p class="empty">No hay órdenes en el período.</p> }
+          </article>
+          <article class="panel chart" aria-labelledby="new-clients-heading">
+            <h3 id="new-clients-heading">Clientes nuevos por mes</h3>
+            @if (data.monthly.length) {
+              <div class="bars">
+                @for (month of data.monthly; track month.month) {
+                  <div class="bar-item"><span>{{ monthLabel(month.month) }}</span><div class="bar-track"><span class="bar clients" [style.width]="barWidth(month.newCustomers, newCustomersMax())"></span></div><strong>{{ month.newCustomers }}</strong></div>
+                }
+              </div>
+            } @else { <p class="empty">No hay clientes nuevos en el período.</p> }
+          </article>
+          <article class="panel chart" aria-labelledby="products-heading">
+            <h3 id="products-heading">Prendas más solicitadas</h3>
+            @if (data.topProducts.length) {
+              <div class="bars">
+                @for (product of data.topProducts; track product.name) {
+                  <div class="bar-item"><span>{{ product.name }}</span><div class="bar-track"><span class="bar products" [style.width]="barWidth(product.orders, topProductMax())"></span></div><strong>{{ product.orders }}</strong></div>
+                }
+              </div>
+            } @else { <p class="empty">No hay prendas solicitadas en el período.</p> }
+          </article>
+        </div>
+        @if (data.operationsByDay) {
+          <details class="panel chart scenario">
+            <summary>Operaciones por día</summary>
+            <ul>@for (day of operationsPage().days; track day.date) { <li><time [attr.datetime]="day.date">{{ day.date }}</time>: {{ day.orders }}</li> } @empty { <li>No hay operaciones en el período.</li> }</ul>
+            <app-pagination label="Paginación de operaciones por día" [info]="operationsPage()" (change)="operationsRequest.set($event)" />
+          </details>
+        }
+      </section>
+
+      <section class="section customer-section" aria-labelledby="customers-heading">
+        <h2 id="customers-heading">Resumen de clientes</h2>
+        <div class="metrics customer-metrics">
+          <article><span>Total de clientes</span><strong>{{ data.summary.totalCustomers }}</strong></article>
+          <article><span>Clientes nuevos</span><strong>{{ data.summary.newCustomers }}</strong></article>
+          <article><span>Clientes frecuentes</span><strong>{{ data.summary.frequentCustomers }}</strong></article>
+        </div>
+        <article class="panel ranked">
+          <h3>Clientes principales por ventas</h3>
+          @if (data.topCustomers.length) {
+            @for (customer of data.topCustomers; track customer.customerId) {
+              <button type="button" class="rank-row" (click)="setCustomer(customer.customerId)">
+                <span>{{ customer.name }} · {{ customer.orders }} {{ customer.orders === 1 ? 'orden' : 'órdenes' }}</span>
+                <span class="bar-track"><span class="bar customers" [style.width]="barWidth(customer.salesCents, topCustomerMax())"></span></span>
+                <strong>{{ money(customer.salesCents) }}</strong>
+              </button>
+            }
+          } @else { <p class="empty">No hay ventas por cliente en el período.</p> }
+        </article>
+      </section>
+
+      <section class="section operations-section" aria-labelledby="operations-heading">
+        <h2 id="operations-heading">Resumen de operaciones</h2>
+        <div class="metrics">
+          <article><span>Producción activa</span><strong>{{ data.summary.productionOrders }}</strong></article>
+          <article><span>Órdenes finalizadas</span><strong>{{ data.summary.completedOrders }}</strong></article>
+          <article class="inventory">
+            <span>Inventario crítico</span><strong>No disponible</strong>
+            <small>El sistema no registra existencias ni niveles mínimos de inventario.</small>
+          </article>
+        </div>
+      </section>
+    }
+  }
+</ng-template>

@@ -1,0 +1,197 @@
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+<header class="site-header wrap">
+  <a class="brand" routerLink="/" aria-label="Página de inicio">
+    <img
+      ngSrc="assets/access-logo-desktop.png"
+      width="2172"
+      height="724"
+      alt="Logo institucional"
+      priority
+    />
+  </a>
+  <nav aria-label="Navegación principal">
+    <a class="section-link" href="#funcionalidades">Funcionalidades</a>
+    <a class="section-link" href="#como-funciona">Cómo funciona</a>
+    <a class="section-link" routerLink="/ayuda">Ayuda</a>
+    <a class="button secondary" routerLink="/acceso"
+      >Iniciar sesión <span aria-hidden="true">↗</span></a
+    >
+  </nav>
+</header>
+
+<main id="contenido" tabindex="-1">
+  <section class="hero wrap" aria-labelledby="hero-title">
+    <div>
+      <p class="eyebrow">HECHO PARA SASTRERÍAS EN REPÚBLICA DOMINICANA</p>
+      <h1 id="hero-title">Cada puntada,<br /><span>bajo control.</span></h1>
+      <p class="intro">
+        Más tiempo para crear. Menos tiempo administrando. Conecta tus clientes, medidas, órdenes y
+        cobros en un solo lugar.
+      </p>
+      <div class="actions">
+        <a class="button primary" routerLink="/acceso"
+          >Acceder a mi sastrería <span aria-hidden="true">→</span></a
+        >
+        <a class="button secondary" routerLink="/portal">Soy cliente</a>
+      </div>
+      <p class="reassurance">Con Google · Sin contraseñas · Acceso por invitación</p>
+    </div>
+    <aside class="workflow" aria-label="Flujo de trabajo de la sastrería">
+      <p class="eyebrow">DEL ENCARGO A LA ENTREGA</p>
+      <h2>Todo sigue el mismo hilo.</h2>
+      <ol>
+        <li>
+          <span class="step-number">01</span>
+          <div>
+            <h3>Conoce a tu cliente</h3>
+            <p>Ficha, contornos y medidas verificadas.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-number">02</span>
+          <div>
+            <h3>Da forma al encargo</h3>
+            <p>Órdenes, etapas de producción y agenda.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-number">03</span>
+          <div>
+            <h3>Entrega con claridad</h3>
+            <p>Facturas, abonos y saldo pendiente.</p>
+          </div>
+        </li>
+      </ol>
+      <div class="workflow-footer">
+        Tu identidad en cada documento<br /><strong>PDF A4 · Ticket de 80 mm</strong>
+      </div>
+    </aside>
+  </section>
+
+  <section id="funcionalidades" class="features section" aria-labelledby="features-title">
+    <div class="wrap">
+      <p class="eyebrow">UNA OPERACIÓN CONECTADA</p>
+      <h2 id="features-title">De la primera medida<br />a la última entrega.</h2>
+      <p class="section-copy">
+        Herramientas para el trabajo diario de tu sastrería, con información organizada por cliente
+        y por encargo.
+      </p>
+      <div class="feature-grid">
+        @for (feature of features; track feature.title) {
+          <article class="card">
+            <span class="feature-number" aria-hidden="true">0{{ $index + 1 }}</span>
+            <h3>{{ feature.title }}</h3>
+            <p>{{ feature.description }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section id="como-funciona" class="section wrap" aria-labelledby="steps-title">
+    <p class="eyebrow">EMPIEZA CON TU EQUIPO</p>
+    <h2 id="steps-title">Un acceso sencillo.<br />Un trabajo mejor organizado.</h2>
+    <ol class="steps">
+      @for (step of steps; track step.title) {
+        <li>
+          <span class="feature-number" aria-hidden="true">0{{ $index + 1 }}</span>
+          <h3>{{ step.title }}</h3>
+          <p>{{ step.description }}</p>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <section class="documents section" aria-labelledby="documents-title">
+    <div class="wrap document-grid">
+      <div>
+        <p class="eyebrow">DOCUMENTOS QUE HABLAN DE TU NEGOCIO</p>
+        <h2 id="documents-title">La identidad de tu sastrería,<br />también al entregar.</h2>
+        <p>
+          Tu nombre comercial es el nombre de tu sastrería. Configura tus datos fiscales, logo y
+          sello una vez; las nuevas facturas guardan una copia para conservar su histórico.
+        </p>
+      </div>
+      <div class="formats">
+        <article>
+          <span class="format-label">A4</span>
+          <div>
+            <h3>PDF empresarial</h3>
+            <p>
+              Descarga y comparte facturas con datos del negocio, conceptos, ITBIS, totales y estado
+              de pago.
+            </p>
+          </div>
+        </article>
+        <article>
+          <span class="format-label">80 mm</span>
+          <div>
+            <h3>Ticket térmico</h3>
+            <p>
+              Vista previa e impresión para Epson TM-T88V. Configura el papel y el corte en el
+              controlador de tu impresora.
+            </p>
+          </div>
+        </article>
+      </div>
+      <p class="document-note">
+        Documentos administrativos: no constituyen comprobantes fiscales autorizados por la DGII ni
+        generan NCF/e-CF.
+      </p>
+    </div>
+  </section>
+
+  <section class="portal section wrap" aria-labelledby="portal-title">
+    <div>
+      <p class="eyebrow">TAMBIÉN PARA TUS CLIENTES</p>
+      <h2 id="portal-title">Más cerca,<br />sin perder el hilo.</h2>
+      <p>
+        El portal permite consultar medidas verificadas, preparar borradores para revisión y
+        gestionar citas. Cada cliente ve únicamente sus propias fichas vinculadas.
+      </p>
+    </div>
+    <a class="button secondary" routerLink="/portal"
+      >Entrar al portal del cliente <span aria-hidden="true">→</span></a
+    >
+  </section>
+
+  <section class="questions section wrap" aria-labelledby="questions-title">
+    <div>
+      <p class="eyebrow">ANTES DE EMPEZAR</p>
+      <h2 id="questions-title">Resolvemos tus dudas.</h2>
+      <p>Encuentra instrucciones paso a paso en el <a routerLink="/ayuda">centro de ayuda</a>.</p>
+    </div>
+    <div>
+      @for (question of questions; track question.title) {
+        <details>
+          <summary>{{ question.title }}</summary>
+          <p>{{ question.answer }}</p>
+        </details>
+      }
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <a class="brand" routerLink="/" aria-label="Volver al inicio"
+        ><img
+          ngSrc="assets/access-logo-desktop.png"
+          width="2172"
+          height="724"
+          alt="Logo institucional"
+      /></a>
+      <nav aria-label="Información y ayuda">
+        <a routerLink="/ayuda">Ayuda</a><a routerLink="/terminos">Términos</a
+        ><a routerLink="/privacidad">Privacidad</a><a routerLink="/acceso">Acceder</a>
+      </nav>
+    </div>
+    <p>Para sastrerías en República Dominicana.</p>
+    <p class="development-note">
+      Plataforma en desarrollo. Utiliza datos de prueba hasta completar las validaciones de
+      operación y cumplimiento.
+    </p>
+    <p>Derechos Reservados KOLECTIV - KOTAILOR &copy; {{ currentYear }}</p>
+  </div>
+</footer>

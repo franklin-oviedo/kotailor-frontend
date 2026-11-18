@@ -1,0 +1,182 @@
+<app-shell>
+  @if (!workshop) {
+    <h1>Agenda y entregas</h1>
+    <p role="status">Selecciona una sastrería para consultar la agenda.</p>
+  } @else if (!canManage) {
+    <h1>Agenda y entregas</h1>
+    <p role="status">Solo el propietario o un encargado pueden gestionar las citas.</p>
+  } @else if (formOpen()) {
+    <div class="page-heading">
+      <div>
+        <h1 #heading tabindex="-1">{{ editing() ? 'Reprogramar cita' : 'Nueva cita' }}</h1>
+        <p>Reserva un momento para tu cliente. Horario de República Dominicana.</p>
+      </div>
+    </div>
+    @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+    <form class="form-card" [formGroup]="form" (ngSubmit)="save()">
+      @if (!editing()) {
+        <label for="kind">Tipo de cita</label>
+        <select id="kind" formControlName="kind">
+          @for (kind of kinds; track kind.value) { <option [value]="kind.value">{{ kind.label }}</option> }
+        </select>
+        <label for="customer-search">Buscar cliente</label>
+        <div class="search-row">
+          <input id="customer-search" type="search" maxlength="120" [formControl]="search" />
+          <button type="button" class="secondary" (click)="loadLookups()" [disabled]="lookupLoading()">Buscar</button>
+        </div>
+        <label for="customer">Cliente</label>
+        <select id="customer" formControlName="customerId" (change)="customerChanged()" required>
+          <option value="">Selecciona un cliente</option>
+          @for (customer of customers(); track customer.id) { <option [value]="customer.id">{{ customer.name }} · {{ customer.phone }}</option> }
+        </select>
+        @if (customerHasMore()) { <p class="help">Hay más clientes. Usa la búsqueda para encontrarlos.</p> }
+        <label for="order">Orden vinculada (opcional)</label>
+        <select id="order" formControlName="orderId">
+          <option value="">Sin orden vinculada</option>
+          @for (order of orders(); track order.id) { <option [value]="order.id">OT-{{ order.number }}</option> }
+        </select>
+        @if (orderHasMore()) { <p class="help">Se muestran las primeras órdenes encontradas.</p> }
+      } @else {
+        <p><strong>{{ editing()!.customerName }}</strong> · {{ kindLabel(editing()!.kind) }}</p>
+      }
+      <label for="appointment-date">Fecha</label>
+      <input id="appointment-date" type="date" formControlName="date" required />
+      <div class="two-columns">
+        <div><label for="appointment-time">Hora</label><input id="appointment-time" type="time" formControlName="time" required /></div>
+        <div><label for="duration">Duración en minutos</label><input id="duration" type="number" min="1" max="1440" step="1" formControlName="duration" required /></div>
+      </div>
+      <label for="responsible">Responsable</label>
+      <select id="responsible" formControlName="responsibleId" required>
+        <option value="">Selecciona un responsable</option>
+        @for (member of members(); track member.id) { <option [value]="member.id">{{ member.name }}</option> }
+      </select>
+      @if (lookupLoading()) { <p role="status" class="help">Cargando opciones…</p> }
+      <p class="help">Se comprueban los horarios de citas registradas en esta sastrería. Los eventos externos de Google no bloquean horarios.</p>
+      <div class="form-actions">
+        <button class="primary" type="submit" [disabled]="saving() || lookupLoading()">{{ saving() ? 'Guardando…' : 'Guardar cita' }}</button>
+        <button class="secondary" type="button" (click)="closeForm()" [disabled]="saving()">Descartar cambios</button>
+      </div>
+    </form>
+  } @else {
+    <div class="page-heading">
+      <div>
+        <h1 #heading tabindex="-1">Agenda y entregas</h1>
+        <p>Pruebas, citas y compromisos en un solo lugar.</p>
+      </div>
+    </div>
+    @if (notice()) { <p class="success" role="status">{{ notice() }}</p> }
+    @if (error()) { <p class="error" role="alert">{{ error() }} <button type="button" class="text-button" (click)="reload()">Actualizar agenda</button></p> }
+    <div class="agenda-layout">
+      <section class="schedule" aria-labelledby="week-heading">
+        <div class="week-toolbar">
+          <h2 id="week-heading">{{ weekLabel() }}</h2>
+          <div class="week-actions">
+            <button type="button" class="secondary" (click)="today()">Hoy</button>
+            <button type="button" class="secondary" aria-label="Semana anterior" (click)="shiftWeek(-1)">‹</button>
+            <button type="button" class="secondary" aria-label="Semana siguiente" (click)="shiftWeek(1)">›</button>
+            <button type="button" class="primary" (click)="openCreate()">+ Nueva cita</button>
+          </div>
+        </div>
+        <div class="calendar-board" aria-label="Calendario semanal">
+          <div class="calendar-header">
+            <div class="calendar-corner"></div>
+            @for (day of weekdays(); track day) {
+              <button type="button" class="calendar-day" [class.selected]="selectedDate() === day" [attr.aria-current]="selectedDate() === day ? 'date' : null" (click)="selectDate(day)">
+                {{ calendarDayLabel(day) }}
+              </button>
+            }
+          </div>
+          <div class="calendar-body">
+            @for (row of calendarRows(); track row.hour) {
+              <div class="time-label">{{ hourLabel(row.hour) }}</div>
+              @for (cell of row.cells; track cell.date) {
+                <div class="calendar-cell" [class.current-day]="selectedDate() === cell.date" [attr.aria-label]="calendarDayLabel(cell.date) + ', ' + hourLabel(row.hour)">
+                  @for (item of cell.appointments; track item.id) {
+                    <button type="button" class="calendar-appointment" [class.fitting]="item.kind === appointmentKinds.Fitting" [class.measurements]="item.kind === appointmentKinds.Measurements" [class.delivery]="item.kind === appointmentKinds.Delivery" [attr.aria-label]="timeLabel(item.startsAt) + ': ' + item.customerName + ', ' + kindLabel(item.kind)" (click)="selectAppointment(item)">
+                      <strong>{{ item.customerName }}</strong>
+                      <span>{{ timeLabel(item.startsAt) }} · {{ kindLabel(item.kind) }}</span>
+                    </button>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+        @if (loading()) { <p role="status">Cargando citas…</p> }
+        @if (loaded() && !appointments().length) { <p class="empty">No hay citas para esta semana.</p> }
+        @if (loaded() && hasMore()) { <p class="help">Se muestran las primeras 100 citas de la semana.</p> }
+      </section>
+      <aside class="agenda-sidebar">
+        <section class="deliveries-card" aria-labelledby="deliveries-heading">
+          <h2 id="deliveries-heading">
+            @if (dashboard(); as summary) {
+              {{ summary.dueToday }} {{ summary.dueToday === 1 ? 'entrega para hoy' : 'entregas para hoy' }}
+            } @else {
+              Entregas de hoy
+            }
+          </h2>
+          @if (dashboardLoading()) {
+            <p role="status">Cargando entregas…</p>
+          } @else if (dashboardError()) {
+            <p class="error" role="alert">No pudimos cargar las entregas. <button class="text-button" type="button" (click)="loadDashboard()">Reintentar</button></p>
+          } @else if (todayDeliveries().length) {
+            <ul class="delivery-list">
+              @for (order of todayDeliveries(); track order.number) {
+                <li>
+                  <strong>{{ order.customerName }}</strong>
+                  <span>{{ orderNumber(order.number) }} · {{ order.catalogName }}</span>
+                  <span>{{ dateLabel(order.deliveryLocal) }}</span>
+                  <span class="delivery-status">{{ orderStatus(order.status) }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p>No hay órdenes de entrega para hoy.</p>
+          }
+          <a class="delivery-action" routerLink="/ordenes">Registrar entrega</a>
+        </section>
+        <section class="calendar-card" aria-labelledby="calendar-heading">
+          <h2 id="calendar-heading">Google Calendar</h2>
+          @if (calendarLoading()) {
+            <p role="status">Consultando conexión…</p>
+          } @else if (calendarError()) {
+            <p class="error" role="alert">No pudimos consultar Calendar. <button class="text-button" type="button" (click)="loadCalendar()">Reintentar</button></p>
+          } @else if (calendarConnection(); as connection) {
+            @if (connection.connected) {
+              <p class="calendar-connected">✓ Conectado · {{ connection.email }}</p>
+              @if (calendarSelection()?.selectedCalendarId) {
+                <p>Solo el calendario «{{ calendarName() }}».</p>
+              } @else {
+                <p>Selecciona el calendario de esta sastrería.</p>
+              }
+            } @else {
+              <p>Conecta Google Calendar para gestionar los eventos.</p>
+            }
+          }
+          <a routerLink="/agenda/calendar">Gestionar conexión →</a>
+        </section>
+      </aside>
+    </div>
+    @if (selectedAppointment(); as item) {
+      <article class="selected-appointment">
+        <div>
+          <h2>{{ kindLabel(item.kind) }} · {{ item.customerName }}</h2>
+          <p>{{ timeLabel(item.startsAt) }} – {{ timeLabel(item.endsAt) }} · {{ item.responsibleName }}@if (item.orderNumber) { · OT-{{ item.orderNumber }} }</p>
+          <p class="sync-status">{{ syncLabel(item.syncStatus) }}</p>
+        </div>
+        @if (cancelId() === item.id) {
+          <div class="confirmation">
+            <p>¿Cancelar esta cita?</p>
+            <button type="button" class="danger" [disabled]="saving()" (click)="cancel(item)">Confirmar cancelación</button>
+            <button type="button" class="secondary" [disabled]="saving()" (click)="cancelId.set(null)">Conservar cita</button>
+          </div>
+        } @else {
+          <div class="appointment-actions">
+            <button type="button" class="text-button" [attr.aria-label]="'Reprogramar cita de ' + item.customerName" (click)="openEdit(item)">Reprogramar</button>
+            <button type="button" class="text-button danger-text" [attr.aria-label]="'Cancelar cita de ' + item.customerName" (click)="cancelId.set(item.id)">Cancelar cita</button>
+          </div>
+        }
+      </article>
+    }
+  }
+</app-shell>

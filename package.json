@@ -3,10 +3,13 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "node scripts/serve.mjs",
+    "start:reports-demo": "ng serve --configuration reports-demo --host 127.0.0.1",
+    "build:reports-demo": "ng build --configuration reports-demo",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:reports-browser": "npm run build:reports-demo && node scripts/test-reports-browser.mjs"
   },
   "private": true,
   "packageManager": "npm@11.6.2",
@@ -21,6 +24,8 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
+    "axe-core": "^4.11.0",
+    "playwright": "^1.58.0",
     "@angular/build": "^21.2.19",
     "@angular/cli": "^21.2.19",
     "@angular/compiler-cli": "^21.2.0",

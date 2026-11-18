@@ -1,0 +1,127 @@
+<app-portal-header [userName]="auth.session()?.user?.name || ''" [loggingOut]="loggingOut()"
+  (signOut)="logout()" (unavailable)="unavailable($event)" />
+<main>
+  <h1 #heading tabindex="-1">Mis citas</h1>
+  <p class="subtitle">Agenda y administra tus citas con la sastrería.</p>
+
+  @if (loading() && !workshops().length) {
+    <p role="status">Cargando tus sastrerías…</p>
+  } @else if (error() && !workshops().length) {
+    <p class="error" role="alert">{{ error() }} <button type="button" class="text-button" (click)="loadWorkshops()">Reintentar</button></p>
+  } @else if (!workshops().length) {
+    <section class="empty">
+      <h2>No tienes sastrerías vinculadas</h2>
+      <p>Solicita una invitación a tu sastrería para poder administrar tus citas.</p>
+      <a routerLink="/portal/inicio">Volver al inicio</a>
+    </section>
+  } @else {
+    @if (workshops().length > 1) {
+      <label class="workshop-picker" for="appointment-workshop">Sastrería
+        <select id="appointment-workshop" (change)="selectWorkshop($event)"
+          [disabled]="loading() || saving() || formOpen() || uncertain()">
+          <option value="">Selecciona una sastrería</option>
+          @for (workshop of workshops(); track workshop.id) {
+            <option [value]="workshop.id" [selected]="workshop.id === selectedId()">{{ workshop.name }}</option>
+          }
+        </select>
+      </label>
+    }
+    @if (hasMoreWorkshops()) { <p class="notice" role="status">No se muestran todas tus sastrerías. Contacta al soporte para acceder a las restantes.</p> }
+
+    @if (selectedId()) {
+      <nav class="week-nav" aria-label="Cambiar semana">
+        <button class="secondary" type="button" [disabled]="loading() || formOpen()" (click)="changeWeek(-1)">Semana anterior</button>
+        <p aria-live="polite">{{ weekLabel() }}</p>
+        <button class="secondary" type="button" [disabled]="loading() || formOpen()" (click)="changeWeek(1)">Semana siguiente</button>
+      </nav>
+      <div class="page-actions">
+        <a class="text-link" routerLink="/portal/inicio" [queryParams]="{ taller: selectedId() }">← Volver al portal</a>
+        @if (!formOpen()) { <button class="primary" type="button" [disabled]="loading() || !responsibles().length || !customers().length" (click)="showCreate()">+ Agendar una cita</button> }
+      </div>
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }} @if (!loading()) { <button type="button" class="text-button" (click)="loadData()">Reintentar</button> }</p>
+      }
+      @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+      @if (loading()) {
+        <p role="status">Cargando citas…</p>
+      } @else if (!responsibles().length) {
+        <p class="empty" role="status">Esta sastrería todavía no tiene personas disponibles para asignar citas.</p>
+      } @else if (!customers().length) {
+        <p class="empty" role="status">No hay una ficha de cliente vinculada para agendar citas.</p>
+      } @else if (!appointments().length && !formOpen()) {
+        <p class="empty" role="status">No tienes citas esta semana.</p>
+      } @else {
+        <ul class="appointment-list">
+          @for (appointment of appointments(); track appointment.id) {
+            <li class="appointment-card">
+              <div>
+                <h2>{{ appointmentKind(appointment.kind) }}</h2>
+                <p><strong>Desde:</strong> {{ dateTime(appointment.startsAt) }}</p>
+                <p><strong>Hasta:</strong> {{ dateTime(appointment.endsAt) }}</p>
+                <p><strong>Responsable:</strong> {{ appointment.responsibleName }}</p>
+              </div>
+              @if (confirmingCancel() === appointment.id) {
+                <div class="cancel-confirm" role="group" aria-label="Confirmar cancelación">
+                  <p>¿Quieres cancelar esta cita?</p>
+                  <button class="danger" type="button" [disabled]="saving()" (click)="cancel(appointment)">Sí, cancelar</button>
+                  <button class="secondary" type="button" [disabled]="saving()" (click)="stopCancel()">Conservar cita</button>
+                </div>
+              } @else {
+                <div class="card-actions">
+                  <button class="secondary" type="button" [disabled]="saving()" (click)="editAppointment(appointment)">Reprogramar</button>
+                  <button class="danger-outline" type="button" [disabled]="saving()" (click)="requestCancel(appointment)">Cancelar cita</button>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+        <app-pagination label="Paginación de mis citas" [info]="appointmentsPage()" [busy]="loading() || saving() || formOpen()" (change)="loadData($event)" />
+      }
+
+      @if (formOpen()) {
+        <form class="appointment-form" (ngSubmit)="save()" novalidate>
+          <h2>{{ editing() ? 'Reprogramar cita' : 'Agendar una cita' }}</h2>
+          <fieldset class="fields" [disabled]="saving() || uncertain()">
+            @if (editing()) {
+              <p class="help">Cita para <strong>{{ editing()!.customerName }}</strong>. Puedes cambiar el responsable y el horario.</p>
+            } @else if (customers().length > 1) {
+              <label for="appointment-customer">Cliente</label>
+              <select id="appointment-customer" [formControl]="form.controls.customerId">
+                <option value="">Selecciona una ficha</option>
+                @for (customer of customers(); track customer.id) { <option [value]="customer.id">{{ customer.name }}</option> }
+              </select>
+            } @else if (customers().length === 1) {
+              <p class="help">Cita para <strong>{{ customers()[0].name }}</strong>.</p>
+            }
+            <label for="appointment-kind">Tipo de cita</label>
+            <select id="appointment-kind" [formControl]="form.controls.kind">
+              @for (kind of kindOptions; track kind.value) { <option [value]="kind.value">{{ kind.label }}</option> }
+            </select>
+            <label for="appointment-responsible">Responsable</label>
+            <select id="appointment-responsible" [formControl]="form.controls.responsibleId">
+              <option value="">Selecciona a una persona</option>
+              @for (responsible of responsibles(); track responsible.id) { <option [value]="responsible.id">{{ responsible.name }}</option> }
+            </select>
+            <div class="date-grid">
+              <div>
+                <label for="appointment-start">Inicio (hora de República Dominicana)</label>
+                <input id="appointment-start" type="datetime-local" [formControl]="form.controls.startsAt" required />
+              </div>
+              <div>
+                <label for="appointment-end">Fin (hora de República Dominicana)</label>
+                <input id="appointment-end" type="datetime-local" [formControl]="form.controls.endsAt" required />
+              </div>
+            </div>
+          </fieldset>
+          <p class="help">El horario se confirma al guardar y está sujeto a disponibilidad del responsable.</p>
+          <div class="form-actions">
+            <button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : uncertain() ? 'Reintentar reserva' : editing() ? 'Guardar horario' : 'Confirmar cita' }}</button>
+            <button class="secondary" type="button" [disabled]="saving()" (click)="closeForm()">Volver</button>
+          </div>
+        </form>
+      }
+    } @else {
+      <p class="empty" role="status">Selecciona una sastrería para consultar y agendar citas.</p>
+    }
+  }
+</main>

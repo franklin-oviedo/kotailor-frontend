@@ -1,0 +1,96 @@
+@if (embedded()) {
+  <ng-container [ngTemplateOutlet]="detailContent" />
+} @else {
+  <app-shell>
+    <a class="back" routerLink="/clientes">← Volver a clientes</a>
+    <h1>Ficha y medidas</h1>
+    <ng-container [ngTemplateOutlet]="detailContent" />
+  </app-shell>
+}
+<ng-template #detailContent>
+  @if (!workshop) {
+    <p role="status">Necesitas una única sastrería asociada para acceder a la ficha.</p>
+  } @else if (loading()) {
+    <p role="status">Cargando ficha y medidas…</p>
+  } @else if (loadError()) {
+    <p class="error" role="alert">{{ loadError() }}</p>
+    <button class="secondary" type="button" (click)="load()">Reintentar</button>
+  } @else if (customer(); as customer) {
+    @if (!embedded()) { <p class="subtitle">{{ customer.name }} · Cliente desde {{ customer.createdAt | date:'dd/MM/yyyy' }}</p> }
+    <div class="detail">
+      <section class="contact" aria-label="Datos de contacto">
+        <h2>{{ customer.name }}</h2>
+        @if (embedded()) { <p>Cliente desde {{ customer.createdAt | date:'dd/MM/yyyy' }}</p> }
+        <p>{{ customer.phone }}@if (customer.email) { · {{ customer.email }} }</p>
+        @if (customer.address) { <p>{{ customer.address }}</p> }
+        <p>Identificación: {{ maskedDocument(customer) }}</p>
+      </section>
+      <div class="tabs"><strong>Medidas</strong><span>Órdenes: próximamente</span><span>Datos fiscales: próximamente</span></div>
+      <div class="garment-buttons" role="group" aria-label="Tipo de prenda">
+        @for (garment of customer.measurementCatalog; track garment.id) {
+          <button #garmentButton type="button" [attr.data-garment]="garment.id" [attr.aria-pressed]="garment.id === selectedGarment()" [disabled]="saving() || loadingMore()" (click)="selectGarment(garment.id)">{{ garment.label }}</button>
+        }
+      </div>
+      <div class="garment-mobile">
+        <label class="garment-label" for="garment">Tipo de prenda</label>
+        <select #garmentSelector id="garment" class="garment" [value]="selectedGarment()" [disabled]="saving() || loadingMore()" (change)="changeGarment(garmentSelector)">
+          @for (garment of customer.measurementCatalog; track garment.id) {
+            <option [value]="garment.id" [selected]="garment.id === selectedGarment()">{{ garment.label }}</option>
+          }
+        </select>
+      </div>
+      @if (switchError()) { <p class="error" role="alert">{{ switchError() }}</p> }
+      @if (pendingSubmission(); as pending) {
+        <div class="version-banner">
+          <strong>Medidas ingresadas por {{ pending.submittedBy }}</strong>
+          <p>{{ pending.submittedAt | date:'dd/MM/yyyy' }} · Pendiente de revisión. La versión verificada se conserva.</p>
+        </div>
+      }
+      @if (versions().length) {
+        <div class="version-banner">
+          <strong>v{{ versions()[0].version }} · Verificada por {{ versions()[0].verifiedBy }}</strong>
+          <p>{{ versions()[0].verifiedAt | date:'dd/MM/yyyy' }} · Las versiones guardadas se conservan.</p>
+        </div>
+      } @else {
+        <div class="version-banner"><strong>Sin medidas verificadas</strong><p>Registra las medidas tomadas y verificadas por la sastrería.</p></div>
+      }
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <p class="help">Unidad: centímetros. Verifica cada medida y no adivines valores.</p>
+        <div class="fields" formGroupName="measurements">
+          @for (field of fields(); track field.key) {
+            <div>
+              <label [for]="field.key">{{ field.label }} (cm)</label>
+              <input [id]="field.key" type="number" inputmode="decimal" min="0.01" max="999.99" step="0.01" [formControlName]="field.key" required [attr.aria-invalid]="form.controls.measurements.controls[field.key].touched && form.controls.measurements.controls[field.key].invalid" [attr.aria-describedby]="form.controls.measurements.controls[field.key].touched && form.controls.measurements.controls[field.key].invalid ? field.key + '-error' : null" />
+              @if (form.controls.measurements.controls[field.key].touched && form.controls.measurements.controls[field.key].invalid) {
+                <p class="field-error" [id]="field.key + '-error'">Indica una medida mayor que cero, con hasta dos decimales.</p>
+              }
+            </div>
+          }
+        </div>
+        <label class="confirmation"><input type="checkbox" formControlName="confirmed" [attr.aria-invalid]="form.controls.confirmed.touched && form.controls.confirmed.invalid" [attr.aria-describedby]="form.controls.confirmed.touched && form.controls.confirmed.invalid ? 'confirmation-error' : null" /> Confirmo que la sastrería verificó estas medidas.</label>
+        @if (form.controls.confirmed.touched && form.controls.confirmed.invalid) { <p class="field-error" id="confirmation-error">Confirma la verificación antes de guardar.</p> }
+        @if (saveError()) { <p class="error" role="alert">{{ saveError() }}</p> }
+        @if (success()) { <p class="success" role="status">{{ success() }}</p> }
+        @if (requiresRefresh()) { <button class="secondary" type="button" [disabled]="loadingMore()" (click)="refreshHistory()">Actualizar historial</button> }
+        <button class="primary" type="submit" [disabled]="saving() || loading() || loadingMore() || requiresRefresh()">{{ saving() ? 'Guardando…' : (pendingSubmission() ? 'Revisar y crear versión' : 'Guardar nueva versión verificada') }}</button>
+        @if (form.dirty && !requiresRefresh()) { <button class="secondary discard" type="button" [disabled]="saving() || loadingMore()" (click)="discardChanges()">Descartar cambios</button> }
+        <p class="help">Cada guardado crea una nueva versión y conserva las anteriores. El cliente vinculado puede consultar la última versión verificada en su portal.</p>
+      </form>
+      <section class="history" aria-labelledby="history-title">
+        <h2 id="history-title">Historial de versiones</h2>
+        @if (!versions().length) {
+          <p>No hay versiones guardadas.</p>
+        } @else {
+          @for (version of versions(); track version.id) {
+            <details>
+              <summary>v{{ version.version }} · Verificada por {{ version.verifiedBy }} · {{ version.verifiedAt | date:'dd/MM/yyyy' }}</summary>
+              <dl>@for (field of fields(); track field.key) { <div><dt>{{ field.label }}</dt><dd>{{ version.measurements[field.key] }} cm</dd></div> }</dl>
+            </details>
+          }
+        }
+        @if (historyError()) { <p class="error" role="alert">{{ historyError() }}</p> }
+        <app-pagination label="Paginación del historial de medidas" [info]="historyPage()" [busy]="loadingMore() || saving()" (change)="changeHistoryPage($event)" />
+      </section>
+    </div>
+  }
+</ng-template>

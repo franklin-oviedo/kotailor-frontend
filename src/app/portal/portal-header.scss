@@ -1,0 +1,31 @@
+:host { display: block; }
+.header { height: 100px; background: white; }
+.header-inner { display: flex; align-items: center; gap: 20px; max-width: 1280px; height: 100%; margin: auto; border-bottom: 1px solid #e2e9eb; }
+.logo { display: flex; align-items: center; justify-content: center; flex: 0 0 170px; height: 72px; }
+.logo img { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+.brand { display: grid; flex-shrink: 0; gap: 7px; color: #61666a; font-size: 12px; }
+.workshop-access { margin-left: auto; color: #005d74; font-size: 13px; font-weight: 500; text-decoration: none; }
+.desktop-nav { display: flex; justify-content: space-between; align-self: stretch; gap: 30px; flex: 1; margin-left: 80px; }
+.desktop-nav a, .desktop-nav button { position: relative; display: flex; align-items: center; border: 0; background: none; color: #61666a; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+.desktop-nav .active { color: #005d74; font-weight: 600; }
+.desktop-nav .active::after { position: absolute; right: 0; bottom: 23px; left: 0; height: 3px; border-radius: 2px; background: #00a4b4; content: ''; }
+.user { display: grid; gap: 5px; margin-left: 45px; font-size: 13px; }
+.user button { padding: 0; border: 0; background: none; color: #005d74; font: inherit; text-align: left; cursor: pointer; }
+.mobile-label { display: none; }
+.mobile-nav { display: none; }
+@media (max-width: 1360px) { .header-inner { margin: 0 32px; } .desktop-nav { margin-left: 24px; } .user { margin-left: 12px; } }
+@media (max-width: 700px) {
+  .header { height: 65px; }
+  .header-inner { justify-content: space-between; gap: 12px; margin: 0 20px; border: 0; }
+  .logo { flex-basis: 130px; height: 55px; }
+  .brand { margin-left: auto; }
+  .brand.logged-in, .desktop-nav { display: none; }
+  .brand span { color: #005d74; }
+  .user { max-width: 145px; margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+  .user strong { font-weight: 400; }
+  .mobile-label { display: block; color: #005d74; }
+  .workshop-access { margin-left: 0; font-size: 12px; }
+  .mobile-nav { position: fixed; z-index: 3; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(4, 1fr); min-height: 78px; border-top: 1px solid #e2e9eb; background: white; }
+  .mobile-nav a, .mobile-nav button { display: flex; align-items: center; justify-content: center; padding: 10px 0; border: 0; background: none; color: #61666a; font: inherit; font-size: 12px; text-decoration: none; cursor: pointer; }
+  .mobile-nav .active { border-top: 3px solid #00a4b4; color: #005d74; font-weight: 600; }
+}

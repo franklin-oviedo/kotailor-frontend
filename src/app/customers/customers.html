@@ -1,0 +1,82 @@
+<app-shell>
+  @if (!workshop) {
+    <h1>Clientes</h1>
+    <p role="status">Necesitas una sastrería asociada para acceder a los clientes.</p>
+  } @else if (creating()) {
+    <h1 #formHeading tabindex="-1">Nuevo cliente</h1>
+    <p class="subtitle">Datos de contacto y facturación.</p>
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <label for="customer-name">Nombre completo *</label>
+      <input id="customer-name" formControlName="name" autocomplete="name" placeholder="Ej. Luis Peña" maxlength="120" required [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid" [attr.aria-describedby]="form.controls.name.touched && form.controls.name.invalid ? 'name-error' : null" />
+      @if (form.controls.name.touched && form.controls.name.invalid) { <p class="field-error" id="name-error">Escribe un nombre de al menos dos caracteres.</p> }
+      <label for="customer-phone">Teléfono *</label>
+      <input id="customer-phone" formControlName="phone" type="tel" autocomplete="tel" placeholder="809-555-0194" maxlength="30" required [attr.aria-invalid]="form.controls.phone.touched && form.controls.phone.invalid" [attr.aria-describedby]="form.controls.phone.touched && form.controls.phone.invalid ? 'phone-error' : null" />
+      @if (form.controls.phone.touched && form.controls.phone.invalid) { <p class="field-error" id="phone-error">Escribe un teléfono válido de al menos siete caracteres.</p> }
+      <label for="customer-email">Correo electrónico</label>
+      <input id="customer-email" formControlName="email" type="email" autocomplete="email" placeholder="nombre@ejemplo.com" maxlength="254" [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid" [attr.aria-describedby]="form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null" />
+      @if (form.controls.email.touched && form.controls.email.invalid) { <p class="field-error" id="email-error">Escribe un correo electrónico válido.</p> }
+      <label for="customer-address">Dirección (opcional)</label>
+      <input id="customer-address" formControlName="address" autocomplete="street-address" maxlength="500" />
+      <label for="customer-kind">Tipo de cliente</label>
+      <select id="customer-kind" formControlName="kind">
+        <option [value]="customerKind.Person">Persona física</option>
+        <option [value]="customerKind.Company">Empresa</option>
+      </select>
+      <label for="document-kind">Identificación fiscal</label>
+      <select id="document-kind" formControlName="documentKind">
+        <option value="">Sin identificación</option>
+        <option [value]="documentKind.Cedula">Cédula</option>
+        <option [value]="documentKind.Rnc">RNC</option>
+        <option [value]="documentKind.Passport">Pasaporte</option>
+      </select>
+      <label for="document-number">Número de documento</label>
+      <input id="document-number" formControlName="documentNumber" maxlength="30" aria-describedby="document-help" />
+      <p class="help" id="document-help">Se solicitará la identificación fiscal aplicable al tipo de comprobante que el cliente requiera.</p>
+      <label class="checkbox"><input type="checkbox" formControlName="contactAuthorized" /> Autorización de contacto (opcional).</label>
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      <button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar cliente' }}</button>
+      <button class="secondary" type="button" [disabled]="saving()" (click)="cancel()">Cancelar</button>
+    </form>
+  } @else {
+    <div class="heading">
+      <div><h1 #listHeading tabindex="-1">Clientes</h1><p class="subtitle">Cada detalle, a la medida de tus clientes.</p></div>
+    </div>
+    @if (blockedNavigation()) { <p class="error" role="alert">Hay cambios en la ficha. Guárdalos o descártalos antes de salir.</p> }
+    <div class="customer-actions">
+      <p class="customer-count">{{ customerCountLabel() }}</p>
+      <button class="primary desktop-add" type="button" (click)="showForm()">+ Nuevo cliente</button>
+    </div>
+    <div class="customer-layout" [class.show-detail]="blockedNavigation()">
+    <div class="list">
+      <label for="customer-search">Buscar cliente</label>
+      <input id="customer-search" type="search" [formControl]="search" placeholder="Nombre, teléfono o documento" maxlength="120" />
+      @if (success()) { <p class="success" role="status">{{ success() }}</p> }
+      @if (error()) { <p class="error" role="alert">{{ error() }} <button type="button" (click)="reload()">Reintentar</button></p> }
+      @if (loading()) {
+        <p role="status">Cargando clientes…</p>
+      } @else if (!error() && customers().length === 0) {
+        <p role="status">{{ search.value ? 'No encontramos clientes para esta búsqueda.' : 'Todavía no hay clientes registrados.' }}</p>
+      } @else if (!error()) {
+        <p class="list-caption">Todos los clientes</p>
+        <ul class="customer-list">
+          @for (customer of customers(); track customer.id) {
+            <li [class.selected]="customer.id === selectedCustomerId()">
+              <button class="desktop-customer" type="button" [attr.aria-pressed]="customer.id === selectedCustomerId()" (click)="selectCustomer(customer.id)"><strong>{{ customer.name }}</strong><span>{{ customer.phone }}@if (customer.kind === customerKind.Company) { · Empresa }</span></button>
+              <a class="mobile-customer" [routerLink]="['/clientes', customer.id]"><strong>{{ customer.name }}</strong><span>{{ customer.phone }}@if (customer.kind === customerKind.Company) { · Empresa }</span><span class="arrow" aria-hidden="true">→</span></a>
+            </li>
+          }
+        </ul>
+        <app-pagination [info]="pagination()" [busy]="loading()" label="Paginación de clientes" (change)="changePage($event)" />
+      }
+      <button class="primary mobile-add" type="button" (click)="showForm()">+ Nuevo cliente</button>
+    </div>
+    <div class="customer-preview">
+      @if (selectedCustomerId(); as id) {
+        <app-customer-detail [customerId]="id" [embedded]="true" />
+      } @else {
+        <p>Selecciona un cliente para consultar su ficha y medidas.</p>
+      }
+    </div>
+    </div>
+  }
+</app-shell>

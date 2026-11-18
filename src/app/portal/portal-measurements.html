@@ -1,0 +1,69 @@
+<app-portal-header [userName]="auth.session()?.user?.name || ''" [loggingOut]="loggingOut()"
+  (signOut)="logout()" (unavailable)="unavailable($event)" />
+<main>
+  <h1>Mis medidas</h1>
+  <p class="subtitle">Tus fichas, organizadas por tipo de prenda.</p>
+  @if (loadingWorkshops()) {
+    <p class="status" role="status">Cargando tus sastrerías…</p>
+  } @else if (error() && !selectedId()) {
+    <p class="error" role="alert">{{ error() }} <button type="button" class="text-button" (click)="loadWorkshops()">Reintentar</button></p>
+  } @else if (workshops().length === 0) {
+    <p class="status">Aún no tienes una sastrería vinculada. Solicita una invitación a tu sastrería.</p>
+    <a routerLink="/ayuda">Centro de ayuda →</a>
+  } @else {
+    @if (workshops().length > 1) {
+      <label class="picker" for="measurement-workshop">Sastrería
+        <select id="measurement-workshop" [value]="selectedId()" (change)="selectWorkshop($event)">
+          <option value="">Selecciona una sastrería</option>
+          @for (workshop of workshops(); track workshop.id) { <option [value]="workshop.id">{{ workshop.name }}</option> }
+        </select>
+      </label>
+    }
+    @if (hasMore()) { <p class="status">No se muestran todas tus sastrerías. Contacta al soporte para acceder a las restantes.</p> }
+    @if (!selectedId()) {
+      <p class="status" role="status">Selecciona una sastrería para consultar tus medidas.</p>
+    } @else if (loadingMeasurements()) {
+      <p class="status" role="status">Cargando tus medidas…</p>
+    } @else if (error()) {
+      <p class="error" role="alert">{{ error() }} <button type="button" class="text-button" (click)="loadMeasurements()">Reintentar</button></p>
+    } @else if (data(); as result) {
+      <section class="info" aria-labelledby="origin-title">
+        <h2 id="origin-title">Tus medidas, con su origen claro.</h2>
+        <p>Solo la sastrería puede verificar las medidas. Los borradores son privados hasta que confirmes su envío.</p>
+      </section>
+      <div class="cards">
+        @for (garment of result.catalog; track garment.id) {
+          <section class="card">
+            <h2>{{ garment.label }}</h2>
+            <p class="count">{{ garment.fields.length }} campos · Unidad: cm</p>
+            @if (submission(garment.id); as sent) {
+              <p class="verified">{{ sent.verified ? 'Envío revisado por la sastrería' : 'Envío pendiente de revisión' }}</p>
+              <a class="draft-link" [routerLink]="['/portal/medidas/envios', selectedId(), sent.id]">Consultar envío →</a>
+            }
+            @if (hasDraft(garment.id)) { <p class="verified">Borrador personal · No verificado</p> }
+            @if (version(garment.id); as record) {
+              <p class="verified">Versión {{ record.version }} · Verificada por la sastrería</p>
+              <p class="date">Verificada el {{ record.verifiedAt | date:'dd/MM/yyyy HH:mm':'-0400' }} (hora de República Dominicana)</p>
+              <details>
+                <summary>Consultar medidas</summary>
+                <dl>
+                  @for (field of garment.fields; track field.key) {
+                    <div><dt>{{ field.label }}</dt><dd>{{ record.measurements[field.key] }} cm</dd></div>
+                  }
+                  <a class="draft-link" [routerLink]="['/portal/medidas', selectedId(), garment.id]">
+                    {{ hasDraft(garment.id) ? 'Editar borrador' : 'Crear borrador' }} →
+                  </a>
+                </dl>
+              </details>
+            } @else {
+              <p class="verified">Sin medidas verificadas</p>
+              <p class="date">La sastrería aún no ha registrado una ficha para esta prenda.</p>
+            }
+          </section>
+        }
+      </div>
+      <p class="footnote">Registra las medidas en centímetros y no mezcles tipos de prenda. Las órdenes anteriores conservan la ficha que utilizó la sastrería.</p>
+    }
+  }
+  @if (notice()) { <p class="status" role="status" aria-live="polite">{{ notice() }}</p> }
+</main>

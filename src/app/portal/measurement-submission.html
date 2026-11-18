@@ -1,0 +1,46 @@
+<app-portal-header [userName]="auth.session()?.user?.name || ''" [loggingOut]="loggingOut()"
+  (signOut)="logout()" (unavailable)="unavailable($event)" />
+<main>
+  <h1>Medidas enviadas</h1>
+  @if (loading()) {
+    <p role="status">Cargando envío…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }} <button type="button" (click)="load()">Reintentar</button></p>
+  } @else if (data(); as sent) {
+    <p class="subtitle">{{ garment()?.label }} · Recibidas por {{ sent.workshopName }}</p>
+    <section class="banner">
+      <h2>Tus medidas llegaron a la sastrería.</h2>
+      <p>{{ garment()?.label }} · {{ garment()?.fields?.length }} medidas completadas</p>
+    </section>
+    <div class="panels">
+      <section class="receipt">
+        <h2 class="desktop-title">Envío de {{ auth.session()?.user?.name }}</h2>
+        <h2 class="mobile-title" [class.reviewed]="sent.verified">{{ sent.verified ? 'Revisadas por la sastrería' : 'Pendiente de revisión' }}</h2>
+        <dl class="receipt-data">
+          <div><dt>Origen</dt><dd>Ingresadas por {{ auth.session()?.user?.name }}</dd></div>
+          <div><dt>Recibidas</dt><dd>{{ sent.submittedAt | date:'dd/MM/yyyy HH:mm':'-0400' }} (hora de República Dominicana)</dd></div>
+          <div class="desktop-row"><dt>Estado</dt><dd [class.pending]="!sent.verified">{{ sent.verified ? 'Revisadas por la sastrería' : 'Pendiente de revisión de la sastrería' }}</dd></div>
+          <div class="desktop-row"><dt>Ficha anterior</dt><dd>Las versiones verificadas se conservan</dd></div>
+          <div class="mobile-row"><dt>Unidad</dt><dd>Centímetros</dd></div>
+        </dl>
+        <details><summary>Consultar medidas enviadas</summary>
+          <dl>@for (field of garment()?.fields ?? []; track field.key) {
+            <div><dt>{{ field.label }}</dt><dd>{{ sent.measurements[field.key] }} cm</dd></div>
+          }</dl>
+        </details>
+      </section>
+      <section class="explanation">
+        <h2 class="desktop-title">¿Qué ocurre ahora?</h2>
+        <h2 class="mobile-title">Las versiones verificadas se conservan.</h2>
+        <p class="desktop-title">{{ sent.verified ? 'La sastrería revisó este envío.' : 'La sastrería revisará las medidas.' }}</p>
+        <p>El envío no sobrescribe las medidas verificadas ni las fichas utilizadas en órdenes anteriores.</p>
+      </section>
+    </div>
+    <div class="actions">
+      <a class="button" routerLink="/portal/medidas" [queryParams]="{ taller: workshopId }">Volver a mis medidas</a>
+      <button class="button secondary" type="button" (click)="unavailable('Agendar una toma de medidas')">Agendar una toma de medidas</button>
+    </div>
+    <p class="footnote">Información privada de tu cuenta en {{ sent.workshopName }}.</p>
+  }
+  @if (notice()) { <p role="status">{{ notice() }}</p> }
+</main>

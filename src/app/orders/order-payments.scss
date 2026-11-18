@@ -1,0 +1,18 @@
+:host { display: block; }
+.panel { padding: 18px; border: 1px solid #e2e9eb; border-radius: 9px; background: white; }
+h2 { margin: 0 0 20px; font-size: 17px; }
+h3 { font-size: 15px; }
+p, li { color: #515c60; font-size: 13px; }
+.error { color: #a32020; }
+.success { color: #17613c; }
+.warning { padding: 12px; background: #fff3d4; color: #654500; }
+dl { margin: 0; }
+dl div { display: flex; justify-content: space-between; gap: 16px; margin: 12px 0; font-size: 13px; }
+dd { margin: 0; font-weight: 600; }
+.entries { padding: 0; list-style: none; }
+.entries li { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid #e2e9eb; overflow-wrap: anywhere; }
+label { display: block; margin: 16px 0 8px; color: #515c60; font-size: 13px; }
+input, select { box-sizing: border-box; width: 100%; min-height: 46px; padding: 12px; border: 1px solid #aebfc2; border-radius: 6px; background: white; color: #16343c; font: inherit; }
+button { min-height: 48px; margin-top: 16px; padding: 0 20px; border: 1px solid #005d74; border-radius: 6px; background: #005d74; color: white; cursor: pointer; font-weight: 600; }
+button:disabled { opacity: .6; }
+.link { min-height: 0; margin: 0; padding: 4px; border: 0; background: transparent; color: #005d74; text-decoration: underline; }

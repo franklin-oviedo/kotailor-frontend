@@ -2,7 +2,8 @@
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
   "cli": {
-    "packageManager": "npm"
+    "packageManager": "npm",
+    "analytics": false
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -49,6 +50,12 @@
               ],
               "outputHashing": "all"
             },
+            "reports-demo": {
+              "browser": "src/main.reports-demo.ts",
+              "tsConfig": "tsconfig.reports-demo.json",
+              "outputPath": "dist/kotailor-reports-demo",
+              "outputHashing": "all"
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,
@@ -61,10 +68,15 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "kotailor:build:production"
+              "buildTarget": "kotailor:build:production",
+              "proxyConfig": "proxy.conf.json"
             },
             "development": {
-              "buildTarget": "kotailor:build:development"
+              "buildTarget": "kotailor:build:development",
+              "proxyConfig": "proxy.conf.json"
+            },
+            "reports-demo": {
+              "buildTarget": "kotailor:build:reports-demo"
             }
           },
           "defaultConfiguration": "development"

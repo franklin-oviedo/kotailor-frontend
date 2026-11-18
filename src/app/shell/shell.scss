@@ -1,0 +1,47 @@
+:host { display: block; min-height: 100vh; color: #16343c; background: #f5f8f9; --sidebar-width: clamp(164px, 16.1vw, 232px); }
+p { margin: 0; }
+button, a { font: inherit; }
+button { cursor: pointer; }
+.shell { min-height: 100vh; display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); }
+.sidebar { display: flex; flex-direction: column; min-height: 100vh; padding: 1.5vw 0; background: white; }
+.logo { display: flex; align-items: center; justify-content: center; width: min(12.8vw, 190px); height: min(5.4vw, 78px); margin-left: 1.5vw; }
+.logo img { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+.nav-caption { margin: 0 1.2vw 1vw; color: #61666a; font-size: clamp(8px, .7vw, 10px); font-weight: 600; }
+nav { display: flex; flex-direction: column; }
+.nav-item { display: flex; align-items: center; gap: .85vw; min-height: clamp(36px, 3.5vw, 50px); margin: 0 .8vw; padding: 0 1vw; border: 0; background: transparent; color: #61666a; text-align: left; text-decoration: none; font-size: clamp(10px, .9vw, 13px); }
+.nav-item img, .mobile-navigation img { flex: 0 0 auto; width: clamp(14px, 1.4vw, 20px); height: clamp(14px, 1.4vw, 20px); }
+.nav-item.active { min-height: clamp(36px, 3.5vw, 50px); border-left: 3px solid #00a4b4; border-radius: 8px; background: #e8f6f7; color: #005d74; font-weight: 600; }
+.nav-item:last-child { margin-top: 20px; border-top: 1px solid #e2e9eb; padding-top: 12px; }
+.sidebar-help { display: grid; gap: .8vw; margin: auto 1.1vw 0; padding: 1.1vw; border-radius: 10px; background: #f2f8f9; color: #005d74; font-size: clamp(10px, .83vw, 12px); }
+.sidebar-help a { color: inherit; }
+.workspace { min-width: 0; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 1.1vw; min-height: clamp(54px, 5.3vw, 76px); padding: 0 2.2vw; border-bottom: 1px solid #e2e9eb; background: white; font-size: clamp(10px, .9vw, 13px); }
+.search-placeholder { display: flex; align-items: center; gap: 12px; width: min(340px, 30%); padding: 10px 12px; border-radius: 7px; background: #f5f8f9; color: #61666a; font-size: 12px; }
+.notifications { border: 0; background: transparent; padding: 8px; }
+.user { display: flex; align-items: center; gap: 1.5vw; }
+.user-copy { display: grid; gap: 2px; }
+.user-copy small { color: #61666a; font-size: .85em; }
+.user-menu { position: relative; }
+.user-menu-trigger { min-width: 24px; padding: 4px; border: 0; background: transparent; color: #61666a; }
+.user-menu-popover { position: absolute; z-index: 4; top: calc(100% + 8px); right: 0; min-width: 150px; padding: 6px; border: 1px solid #e2e9eb; border-radius: 7px; background: white; box-shadow: 0 4px 16px #16343c26; }
+.user-menu-popover button { width: 100%; padding: 10px; border: 0; background: transparent; color: #005d74; text-align: left; }
+.mobile-workshop-label { display: none; }
+.content { max-width: 1300px; margin: auto; padding: clamp(18px, 1.8vw, 26px) 2.2vw; }
+.notice { margin-top: 16px; font-size: 13px; }
+.mobile-logo, .mobile-navigation, .mobile-more { display: none; }
+@media (max-width: 700px) {
+  .shell { display: block; }
+  .sidebar { display: none; }
+  .topbar { min-height: 65px; padding: 4px 16px; }
+  .mobile-logo { display: block; width: 130px; height: 55px; margin: 0; }
+  .search-placeholder, .notifications, .user { display: none; }
+  .workshop-name { display: grid; gap: 3px; max-width: 46%; font-size: 12px; overflow-wrap: anywhere; }
+  .mobile-workshop-label { display: block; color: #61666a; font-size: 11px; }
+  .content { padding: 20px 20px 100px; }
+  .mobile-navigation { position: fixed; z-index: 2; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(4, 1fr); min-height: 78px; border-top: 1px solid #e2e9eb; background: white; }
+  .mobile-navigation a, .mobile-navigation button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 8px 0; border: 0; background: transparent; color: #61666a; font-size: 11px; text-decoration: none; }
+  .mobile-navigation a.active, .mobile-navigation button.active { border-top: 3px solid #00a4b4; color: #005d74; font-weight: 600; }
+  .mobile-more { position: fixed; z-index: 3; right: 12px; bottom: 86px; display: grid; min-width: 180px; padding: 8px; border: 1px solid #cfdadd; border-radius: 8px; background: white; box-shadow: 0 4px 16px #16343c26; }
+  .mobile-more a, .mobile-more button { padding: 12px; color: #005d74; text-align: left; }
+  .mobile-more button { border: 0; background: transparent; }
+}

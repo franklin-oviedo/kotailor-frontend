@@ -1,0 +1,177 @@
+<app-shell>
+  @if (!workshop) {
+    <h1>Órdenes</h1>
+    <p role="status">Necesitas una sastrería asociada para acceder a las órdenes.</p>
+  } @else if (view() === views.List) {
+    <h1 #heading tabindex="-1">Órdenes</h1><p class="subtitle">Del primer encargo a la última puntada.</p>
+    <div class="list-toolbar">
+      <div class="search-field">
+        <label for="order-search">Buscar orden</label>
+        <input id="order-search" class="search" type="search" [formControl]="search" maxlength="120" placeholder="Número, cliente o prenda" />
+      </div>
+      <button class="primary desktop-add" type="button" (click)="showCreate()">+ Nueva orden</button>
+    </div>
+    <div class="filters" aria-label="Filtrar órdenes por estado">
+      @for (option of filters; track option.value) {
+        <button type="button" [class.active]="filter() === option.value" [attr.aria-pressed]="filter() === option.value" (click)="selectFilter(option.value)">{{ option.label }}@if (counts(); as totals) { <span> {{ totals[option.value] }}</span> }</button>
+      }
+    </div>
+    @if (success()) { <p class="success" role="status">{{ success() }}</p> }
+    @if (error()) { <p class="error" role="alert">{{ error() }} <button type="button" (click)="search.setValue(search.value)">Reintentar</button></p> }
+    @if (loading()) {
+      <p role="status">Cargando órdenes…</p>
+    } @else if (!error() && !orders().length) {
+      <p role="status">{{ search.value || filter() !== filters[0].value ? 'No encontramos órdenes para este filtro.' : 'Todavía no hay órdenes registradas.' }}</p>
+    } @else if (!error()) {
+      <div class="columns" aria-hidden="true"><span>ORDEN</span><span>CLIENTE</span><span>PRENDA</span><span>ENTREGA</span><span>PRODUCCIÓN</span><span>TOTAL</span><span></span></div>
+      <ul class="orders">
+        @for (order of orders(); track order.id) {
+          <li><button type="button" class="order" (click)="openDetail(order.id)">
+            <span class="number">{{ orderNumber(order.number) }}</span>
+            <strong>{{ order.customerName }}</strong>
+            <span>{{ order.catalogName }}</span>
+            <span class="order-footer"><span class="order-status">{{ status(order.status) }}</span><span class="order-date">{{ date(order.deliveryLocal) }}</span></span>
+            <span class="amount">{{ order.taxCents === null ? 'Impuesto pendiente' : money(order.subtotalCents + order.taxCents) }}</span>
+            <span class="arrow" aria-hidden="true">→</span>
+          </button></li>
+        }
+      </ul>
+      <app-pagination [info]="pagination()" [busy]="loading()" label="Paginación de órdenes" (change)="changePage($event)" />
+    }
+    <button class="primary mobile-add" type="button" (click)="showCreate()">+ Nueva orden</button>
+  } @else if (view() === views.Create) {
+    <h1 #heading tabindex="-1">Nueva orden</h1>
+    <p class="subtitle">Una orden clara desde el primer día.</p>
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="lookup">
+        <label for="customer-filter">Buscar cliente</label>
+        <input id="customer-filter" type="search" [formControl]="customerSearch" maxlength="120" placeholder="Nombre, teléfono o documento" />
+        <label for="item-filter">Buscar prenda o servicio</label>
+        <input id="item-filter" type="search" [formControl]="itemSearch" maxlength="120" placeholder="Nombre de la prenda" />
+        <button class="secondary" type="button" [disabled]="lookupLoading()" (click)="searchChoices()">Buscar</button>
+      </div>
+      @if (lookupLoading()) { <p role="status">Cargando clientes y prendas…</p> }
+      <label for="order-customer">01 · Cliente *</label>
+      <select #customer id="order-customer" formControlName="customerId" required (change)="chooseCustomer(customer.value)">
+        <option value="">Selecciona un cliente</option>
+        @for (option of customers(); track option.id) { <option [value]="option.id">{{ option.name }} · {{ option.phone }}</option> }
+      </select>
+      @if (customerHasMore()) { <p class="help">Hay más clientes. Utiliza la búsqueda para encontrarlos.</p> }
+      <label for="order-item">02 · Prenda o servicio *</label>
+      <select #item id="order-item" formControlName="catalogId" required (change)="chooseItem(item.value)">
+        <option value="">Selecciona una prenda o servicio</option>
+        @for (option of items(); track option.id) { <option [value]="option.id">{{ option.name }}</option> }
+      </select>
+      @if (itemHasMore()) { <p class="help">Hay más prendas. Utiliza la búsqueda para encontrarlas.</p> }
+      @if (selectedItem()?.instructions) { <p class="info">{{ selectedItem()!.instructions }}</p> }
+      @if (measurementLoading()) { <p role="status">Cargando versiones de medidas…</p> }
+      @for (group of versions(); track group.garment) {
+        <label [for]="'measurement-' + group.garment">Versión de medidas · {{ templateLabel(group.garment) }} *</label>
+        <select #version [id]="'measurement-' + group.garment" [value]="selectedVersions()[group.garment] || ''" (change)="selectVersion(group.garment, version.value)" required>
+          <option value="">Selecciona una versión verificada</option>
+          @for (entry of group.versions; track entry.id) { <option [value]="entry.id">Versión {{ entry.version }} · {{ entry.verifiedBy }}</option> }
+        </select>
+        @if (!group.versions.length) { <p class="error">El cliente no tiene medidas verificadas para esta prenda. <a [routerLink]="['/clientes', form.controls.customerId.value]">Ir a su ficha</a></p> }
+        @if (group.hasMore) { <p class="help">Se muestran las 20 versiones más recientes.</p> }
+      }
+      <label for="order-price">Precio sin impuestos (DOP) *</label>
+      <input id="order-price" formControlName="price" inputmode="decimal" required aria-describedby="price-help" />
+      <p class="help" id="price-help">Puedes ajustar el precio base. Usa un punto para los decimales.</p>
+      <label for="order-delivery">03 · Fecha y hora de entrega *</label>
+      <input id="order-delivery" formControlName="deliveryLocal" type="datetime-local" required aria-describedby="delivery-help" />
+      <p class="help" id="delivery-help">Hora de República Dominicana (America/Santo_Domingo).</p>
+      <label for="order-responsible">Responsable</label>
+      <select id="order-responsible" formControlName="responsibleId">
+        <option value="">Sin asignar</option>
+        @for (member of settings()?.members ?? []; track member.id) { <option [value]="member.id">{{ member.name }}</option> }
+      </select>
+      <section class="summary" aria-labelledby="summary-heading">
+        <h2 id="summary-heading">04 · Resumen de la orden</h2>
+        <dl><div><dt>Subtotal</dt><dd>{{ subtotal() === null ? '—' : money(subtotal()!) }}</dd></div>
+          <div><dt>ITBIS</dt><dd>{{ tax() === null ? 'Sin calcular' : money(tax()!) }}</dd></div>
+          <div class="total"><dt>Total DOP</dt><dd>{{ subtotal() === null || tax() === null ? 'Sin calcular' : money(subtotal()! + tax()!) }}</dd></div>
+        </dl>
+      </section>
+      @if (taxMissing()) {
+        <p class="warning" role="status">Esta orden se creará sin calcular ITBIS porque la tasa de la sastrería no está configurada. El total quedará pendiente de cálculo.</p>
+      }
+      @if (settings()?.role === roles.Owner) { <button class="text-button" type="button" (click)="showTaxSettings()">Configurar tasa de ITBIS →</button> }
+      <p class="info-box">Se guardará una copia de las medidas utilizadas. Los cobros se registran desde la ficha de la orden.</p>
+      @if (success()) { <p class="success" role="status">{{ success() }}</p> }
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      <button class="primary full" type="submit" [disabled]="saving() || lookupLoading() || measurementLoading() || !settings()">{{ saving() ? 'Creando…' : 'Crear orden' }}</button>
+      <button class="secondary full" type="button" [disabled]="saving()" (click)="back()">Cancelar</button>
+      <p class="help">No emite automáticamente una factura fiscal.</p>
+    </form>
+  } @else if (view() === views.Tax) {
+    <h1 #heading tabindex="-1">Configuración de ITBIS</h1>
+    <p class="subtitle">La tasa se aplica solo a nuevas órdenes gravadas.</p>
+    <div class="tax-form">
+      <label for="tax-rate">Tasa de la sastrería (%)</label>
+      <input id="tax-rate" [formControl]="taxRate" inputmode="decimal" aria-describedby="rate-help" />
+      <p class="help" id="rate-help">Consulta el porcentaje aplicable con tu asesor fiscal. Deja el campo vacío si todavía no está configurado.</p>
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      <button class="primary full" type="button" [disabled]="saving()" (click)="saveTax()">Guardar configuración</button>
+      <button class="secondary full" type="button" [disabled]="saving()" (click)="view.set(views.Create); focusAfterTax()">Volver a la orden</button>
+    </div>
+  } @else if (detail(); as order) {
+    <h1 #heading tabindex="-1">Orden #{{ orderNumber(order.number) }}</h1>
+    <p class="subtitle">{{ order.customerName }} · {{ order.catalogName }}</p>
+    <button class="text-button" type="button" [disabled]="saving()" (click)="back()">← Todas las órdenes</button>
+    @if (success()) { <p class="success" role="status">{{ success() }}</p> }
+    <app-order-production-status [stages]="stages" [current]="order.status" [currentLabel]="status(order.status)" [responsible]="order.responsibleName" [delivery]="date(order.deliveryLocal)" />
+    @if (workshop.role === roles.Owner || workshop.role === roles.Manager) {
+      <div class="status-actions list-toolbar" aria-label="Cambiar etapa de la orden">
+        @if (previousStage(); as previous) { <button class="secondary" type="button" [disabled]="saving() || statusUncertain()" (click)="changeStatus(previous.value)">Volver a {{ previous.label }}</button> }
+        @if (nextStage(); as next) { <button class="primary" type="button" [disabled]="saving() || statusUncertain()" (click)="changeStatus(next.value)">Marcar como {{ next.label }}</button> }
+      </div>
+      @if (saving()) { <p role="status">Actualizando etapa…</p> }
+    }
+    @if (error()) { <p class="error" role="alert">{{ error() }} @if (statusUncertain()) { <button type="button" [disabled]="loading()" (click)="openDetail(order.id)">Actualizar orden</button> }</p> }
+    <section class="detail-grid">
+      <div class="detail-main">
+        <section class="panel">
+          <h2>Prendas de esta orden</h2>
+          <div class="detail-garment">
+            <h3>01 · {{ order.catalogName }}</h3>
+            @if (order.instructions) { <p>{{ order.instructions }}</p> }
+          </div>
+          <div class="detail-measurements">
+            @for (snapshot of order.measurementSnapshots; track snapshot.id) {
+              <h3>{{ snapshot.label }} · Versión {{ snapshot.version }}</h3>
+              <p>Verificada por {{ snapshot.verifiedBy }}</p>
+              <dl class="measurements">@for (measurement of snapshot.measurements | keyvalue; track measurement.key) {
+                <div><dt>{{ fieldLabel(snapshot, measurement.key) }}</dt><dd>{{ measurement.value }} cm</dd></div>
+              }</dl>
+            }
+            @if (!order.measurementSnapshots.length) { <p>Esta prenda no requiere plantillas de medidas.</p> }
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Actividad de la orden</h2>
+          @for (event of order.history; track event.id) {
+            <div class="activity"><time class="help" [attr.datetime]="event.changedAt">{{ createdDate(event.changedAt) }}</time><p>{{ event.changedBy }} cambió la etapa de {{ status(event.previousStatus) }} a {{ status(event.newStatus) }}.</p></div>
+          }
+          <app-pagination label="Paginación de actividad de la orden" [info]="order.historyPagination ?? null" [busy]="loading() || saving()" (change)="openDetail(order.id, $event)" />
+          <div class="activity"><time class="help" [attr.datetime]="order.createdAt">{{ createdDate(order.createdAt) }}</time><p>Orden creada por {{ order.createdBy }}.</p></div>
+        </section>
+      </div>
+      <section class="panel summary"><h2>Resumen de la orden</h2>
+        <dl><div><dt>Subtotal</dt><dd>{{ money(order.subtotalCents) }}</dd></div>
+          <div><dt>ITBIS</dt><dd>{{ order.taxCents === null ? 'Sin calcular' : money(order.taxCents) }}</dd></div>
+          <div class="total"><dt>Total</dt><dd>{{ order.taxCents === null ? 'Sin calcular' : money(order.subtotalCents + order.taxCents) }}</dd></div>
+        </dl>
+        @if (order.taxCents === null) {
+          <p class="warning">Orden creada sin cálculo de ITBIS: la tasa no estaba configurada. Guardar la tasa no modifica esta orden hasta que se aplique el ajuste por lote.</p>
+          @if (workshop.role === roles.Owner) {
+            <a class="text-button" routerLink="/configuracion-fiscal">Ir a Configuración fiscal</a>
+          }
+        }
+        <p class="help">El cálculo de ITBIS no emite un comprobante fiscal (NCF/e-CF).</p>
+      </section>
+      @if (workshop.role === roles.Owner || workshop.role === roles.Manager) {
+        <app-order-payments [workshopId]="workshop.id" [orderId]="order.id" />
+      }
+    </section>
+  }
+</app-shell>

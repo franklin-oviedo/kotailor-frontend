@@ -1,0 +1,77 @@
+<app-shell>
+  @if (!workshop) {
+    <h1>Prendas</h1>
+    <p role="status">Necesitas una sastrería asociada para acceder al catálogo.</p>
+  } @else if (creating()) {
+    <h1 #formHeading tabindex="-1">{{ editing() ? 'Editar prenda' : 'Nueva prenda' }}</h1>
+    <p class="subtitle">{{ editing() ? 'Actualiza la plantilla de la sastrería.' : 'Crea una plantilla para futuros encargos.' }}</p>
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <label for="catalog-name">Nombre de la prenda o servicio *</label>
+      <input id="catalog-name" formControlName="name" maxlength="120" required [attr.aria-invalid]="form.controls.name.touched && (form.controls.name.invalid || form.controls.name.value.trim().length < 2)" />
+      <label for="catalog-category">Categoría *</label>
+      <select id="catalog-category" formControlName="category" required [attr.aria-invalid]="form.controls.category.touched && form.controls.category.invalid">
+        <option value="">Selecciona una categoría</option>
+        <option [value]="category.Tailoring">Confección a medida</option>
+        <option [value]="category.Alteration">Arreglos y ajustes</option>
+      </select>
+      <label for="catalog-price">Precio base sin impuestos (DOP) *</label>
+      <input id="catalog-price" formControlName="price" inputmode="decimal" placeholder="0.00" required aria-describedby="price-help" [attr.aria-invalid]="form.controls.price.touched && form.controls.price.invalid" />
+      <p class="help" id="price-help">Utiliza un punto para los decimales, sin separadores de miles.</p>
+      <label for="catalog-tax">Tratamiento de ITBIS *</label>
+      <select id="catalog-tax" formControlName="taxTreatment" required aria-describedby="tax-help" [attr.aria-invalid]="form.controls.taxTreatment.touched && form.controls.taxTreatment.invalid">
+        <option value="">Selecciona un tratamiento</option>
+        <option [value]="taxTreatment.Taxable">Gravado</option>
+        <option [value]="taxTreatment.Exempt">Exento</option>
+      </select>
+      <p class="help" id="tax-help">La sastrería debe confirmar el tratamiento aplicable. Aquí no se calculan impuestos ni se emiten comprobantes.</p>
+      <fieldset>
+        <legend>Medidas requeridas</legend>
+        <p class="template-summary">{{ templateSummary() }}</p>
+        <button class="configure" type="button" [attr.aria-expanded]="configuringTemplates()" [attr.aria-controls]="configuringTemplates() ? 'catalog-templates' : null" (click)="configuringTemplates.set(!configuringTemplates())">Configurar →</button>
+        @if (configuringTemplates()) {
+          <div id="catalog-templates">
+            <p class="help">Selecciona las plantillas necesarias. Las medidas se registran en centímetros.</p>
+            @for (template of templates(); track template.id) {
+              <label class="checkbox"><input #templateCheckbox type="checkbox" [checked]="selectedTemplates().includes(template.id)" (change)="toggleTemplate(template.id, templateCheckbox.checked)" /> {{ template.label }} · {{ template.fields.length }} campos</label>
+            }
+          </div>
+        }
+      </fieldset>
+      <label for="catalog-instructions">Instrucciones de confección</label>
+      <textarea id="catalog-instructions" formControlName="instructions" maxlength="1000" rows="3"></textarea>
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      <button class="primary" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar prenda' }}</button>
+      <button class="secondary" type="button" [disabled]="saving()" (click)="cancel()">Cancelar</button>
+    </form>
+  } @else {
+    <div class="heading">
+      <div><h1 #listHeading tabindex="-1">Prendas</h1><p class="subtitle">Plantillas y servicios de la sastrería.</p></div>
+      <button class="primary desktop-add" type="button" [disabled]="loading() || !!error()" (click)="showForm()">+ Nueva prenda o servicio</button>
+    </div>
+    <div class="list">
+      <label for="catalog-search">Buscar prenda o servicio</label>
+      <input id="catalog-search" type="search" [formControl]="search" placeholder="Nombre de la prenda" maxlength="120" />
+      @if (success()) { <p class="success" role="status">{{ success() }}</p> }
+      @if (error()) { <p class="error" role="alert">{{ error() }} <button type="button" (click)="reload()">Reintentar</button></p> }
+      @if (loading()) {
+        <p role="status">Cargando prendas y servicios…</p>
+      } @else if (!error() && items().length === 0) {
+        <p role="status">{{ search.value ? 'No encontramos prendas o servicios para esta búsqueda.' : 'Todavía no hay prendas o servicios registrados.' }}</p>
+      } @else if (!error()) {
+        <ul class="items">
+          @for (item of items(); track item.id) {
+            <li><button class="item" type="button" (click)="showForm(item)" [attr.aria-label]="'Editar ' + item.name">
+              <strong>{{ item.name }}</strong>
+              <span>{{ item.category === category.Tailoring ? 'Confección a medida' : 'Arreglos y ajustes' }} · {{ item.measurementGarments.length }} plantillas de medidas</span>
+              <span class="price">Desde {{ formatPrice(item.basePriceCents) }} sin impuestos · {{ item.taxTreatment === taxTreatment.Taxable ? 'Gravado' : 'Exento' }}</span>
+              <span class="arrow" aria-hidden="true">→</span>
+            </button></li>
+          }
+        </ul>
+        <app-pagination [info]="pagination()" [busy]="loading()" label="Paginación de prendas" (change)="changePage($event)" />
+      }
+      <button class="primary mobile-add" type="button" [disabled]="loading() || !!error()" (click)="showForm()">+ Nueva prenda o servicio</button>
+      <p class="help">Los precios base se muestran sin impuestos.</p>
+    </div>
+  }
+</app-shell>

@@ -1,0 +1,88 @@
+<main class="access">
+  <section class="presentation" aria-label="Presentación">
+    <div class="presentation-content">
+      <p class="eyebrow">HECHO PARA TU SASTRERÍA</p>
+      <h1>Cada puntada,<br />bajo control.</h1>
+      <p class="description">
+        Más tiempo para crear. Menos tiempo administrando.<br />
+        Tu sastrería conectada, de principio a fin.
+      </p>
+
+      <div class="preview" aria-label="Ejemplo de actividad de una sastrería">
+        <p class="preview-label">ASÍ MARCHA TU SASTRERÍA</p>
+        <p class="preview-title">Una entrega perfecta empieza aquí.</p>
+        <div class="preview-row">
+          <span class="preview-number">01</span>
+          <div><strong>Camila Rodríguez</strong><span>Traje de dos piezas</span></div>
+          <span class="preview-status">En confección</span>
+        </div>
+        <div class="preview-row">
+          <span class="preview-number">02</span>
+          <div><strong>José Pérez</strong><span>Camisa a medida</span></div>
+          <span class="preview-status">Lista para entregar</span>
+        </div>
+      </div>
+    </div>
+    <div class="presentation-footer">
+      <p>REPÚBLICA DOMINICANA</p>
+      <span>Clientes · Producción · Finanzas</span>
+    </div>
+  </section>
+
+  <section class="authentication" aria-label="Acceso">
+    <header class="mobile-header">
+      <a class="logo logo-mobile" routerLink="/" aria-label="Ir a la página de inicio">
+        <img ngSrc="assets/access-logo-desktop.png" width="2172" height="724" alt="Logo institucional" priority />
+      </a>
+      <a class="help-header" routerLink="/ayuda">Ayuda</a>
+    </header>
+
+    <div class="authentication-content">
+      <a class="logo logo-desktop" routerLink="/" aria-label="Ir a la página de inicio">
+        <img ngSrc="assets/access-logo-desktop.png" width="2172" height="724" alt="Logo institucional" priority />
+      </a>
+      <h2 class="desktop-title">Bienvenido</h2>
+      <h1 class="mobile-title">Tu sastrería,<br />en un solo lugar.</h1>
+      <p class="desktop-subtitle">Tu sastrería, en un solo lugar.</p>
+      <p class="mobile-subtitle">Menos administración. Más tiempo para crear.</p>
+
+      @if (loading()) {
+        <p class="signed-in" role="status">Comprobando sesión…</p>
+      } @else if (auth.session(); as session) {
+        <p class="signed-in" role="status">Sesión iniciada como {{ session.user.name }}.</p>
+        <button class="google-button" type="button" [disabled]="loggingOut()" (click)="logout()">
+          {{ loggingOut() ? 'Cerrando sesión…' : 'Cerrar sesión' }}
+        </button>
+      } @else {
+        <a class="google-button" href="/api/auth/google">
+          <svg class="google-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+            <path fill="#4285F4" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+            <path fill="#34A853" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.91c-.58 2.96-2.27 5.48-4.78 7.18l7.73 6.01c4.51-4.18 7.12-10.34 7.12-17.66z" />
+            <path fill="#FBBC05" d="M10.53 28.59a14.4 14.4 0 0 1-.76-4.59c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78z" />
+            <path fill="#EA4335" d="M24 48c6.48 0 11.93-2.13 15.9-5.79l-7.73-6.01c-2.14 1.43-4.88 2.27-8.17 2.27-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+          </svg>
+          Continuar con Google
+        </a>
+      }
+      <p class="secure-copy">Acceso seguro, sin contraseñas.</p>
+      <p class="account-copy">
+        Usa la cuenta de Google asociada a tu sastrería.<br />
+        Si eres nuevo, solicita una invitación para crear tu negocio.
+      </p>
+
+      <div class="calendar">
+        <h3>Tú decides qué conectar</h3>
+        <p class="calendar-desktop">Google Calendar se autoriza por separado desde la agenda.<br />No es necesario para iniciar sesión.</p>
+        <p class="calendar-mobile">Google Calendar se autoriza por separado.<br />No es necesario para iniciar sesión.</p>
+      </div>
+      <a class="portal-button" routerLink="/portal">
+        Soy cliente: ir a mi portal
+      </a>
+      <p class="legal-copy">Consulta los <a routerLink="/terminos">Términos</a> y la <a routerLink="/privacidad">Política de privacidad</a> antes de continuar.</p>
+      <a class="help-link" routerLink="/ayuda">
+        ¿No puedes acceder? <span>Obtener ayuda ↗</span>
+      </a>
+      <p class="notice" role="status" aria-live="polite">{{ notice() }}</p>
+    </div>
+  </section>
+</main>

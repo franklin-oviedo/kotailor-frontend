@@ -1,0 +1,66 @@
+<app-shell>
+  <p class="development-notice" role="note">Entorno en desarrollo: no introduzcas datos reales de clientes todavía.</p>
+  <h1>Google Calendar</h1>
+  <p class="subtitle">Controla qué calendario conectas a tu sastrería.</p>
+  <p class="subtitle"><a routerLink="/agenda">Volver a la agenda</a></p>
+  <p class="notice-box" role="status">La sincronización de citas y el cambio de calendario no están activos mientras se verifica la seguridad de los datos.</p>
+
+  @if (!workshop) {
+    <p role="status">Necesitas una sastrería asociada para gestionar Calendar.</p>
+  } @else if (!canManage) {
+    <p role="status">Solo el propietario o un encargado pueden gestionar Google Calendar.</p>
+  } @else {
+    @if (notice()) { <p class="success" role="status">{{ notice() }}</p> }
+    @if (error()) { <p class="error" role="alert">{{ error() }} <button type="button" class="text-button" (click)="load()" [disabled]="loading() || busy()">Reintentar</button></p> }
+    @if (loading()) {
+      <p role="status">Cargando conexión…</p>
+    } @else if (connection(); as account) {
+      @if (!account.connected) {
+        <section class="card" aria-labelledby="connect-heading">
+          <h2 id="connect-heading">Conecta Google Calendar</h2>
+          <p>La autorización es independiente del acceso a la aplicación. Solicita permiso para listar calendarios y gestionar eventos en los calendarios accesibles por esa cuenta.</p>
+          <button type="button" class="primary" [disabled]="busy()" (click)="connect()">{{ busy() ? 'Preparando…' : 'Conectar Google Calendar' }}</button>
+          @if (authorizationUrl(); as url) { <a class="secondary link-button" [href]="url">Continuar con Google</a> }
+        </section>
+      } @else {
+        <section class="connected" aria-labelledby="connected-heading">
+          <h2 id="connected-heading">Google Calendar conectado</h2>
+          <p>{{ account.email }}</p>
+        </section>
+        @if (selection(); as current) {
+          <section class="card" aria-labelledby="calendar-heading">
+            <h2 id="calendar-heading">Calendario de la sastrería</h2>
+            @if (current.selectedCalendarId) {
+              <p><strong>{{ selectedName() }}</strong></p>
+            }
+            @if (current.pendingCalendarId) {
+              <p class="error" role="status">Hay un traslado detenido. No se pueden modificar citas ni desconectar mientras esté pendiente.</p>
+            } @else if (current.selectedCalendarId) {
+              <p class="help">El cambio de calendario no está disponible actualmente.</p>
+            } @else {
+              <label for="calendar-choice">Selecciona un calendario con permiso de escritura</label>
+              <select id="calendar-choice" [formControl]="calendarId">
+                <option value="">Selecciona un calendario</option>
+                @for (calendar of calendars(); track calendar.id) {
+                  <option [value]="calendar.id">{{ calendar.name }}{{ calendar.primary ? ' · Principal' : '' }}</option>
+                }
+              </select>
+              @if (!calendars().length && !nextPageToken()) { <p class="help">No hay calendarios con permisos de escritura disponibles.</p> }
+              <button type="button" class="primary" [disabled]="!calendarId.value || busy()" (click)="select()">Guardar calendario</button>
+            }
+            @if (nextPageToken()) {
+              <button type="button" class="secondary" [disabled]="busy()" (click)="more()">Cargar más calendarios</button>
+            }
+          </section>
+        }
+        <section class="card" aria-labelledby="permissions-heading">
+          <h2 id="permissions-heading">Permisos y desconexión</h2>
+          <p>La cuenta autorizada concede acceso a los calendarios que puede consultar y editar. Desconectar elimina las credenciales guardadas, pero no borra los eventos existentes en Google.</p>
+          <p>Para revocar el permiso también puedes hacerlo en la <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">configuración de seguridad de Google <span class="sr-only">(se abre en otra pestaña)</span></a>.</p>
+          <label class="checkbox"><input type="checkbox" [formControl]="confirmDisconnect" /> Entiendo que se eliminará la conexión.</label>
+          <button type="button" class="secondary" [disabled]="!confirmDisconnect.value || busy() || !!selection()?.pendingCalendarId" (click)="disconnect()">Desconectar calendario</button>
+        </section>
+      }
+    }
+  }
+</app-shell>

@@ -1,0 +1,38 @@
+:host { display: block; min-height: 100vh; background: #f5f8f9; color: #16343c; }
+main { max-width: 1280px; margin: auto; padding: 30px 0 100px; }
+h1, h2, p { margin: 0; }
+h1 { font-size: 29px; font-weight: 600; }
+.subtitle { margin-top: 12px; color: #61666a; font-size: 13px; }
+.status, .error { margin-top: 24px; font-size: 13px; }
+.error { color: #a32b25; }
+a, .text-button { color: #005d74; }
+.text-button { border: 0; background: none; font: inherit; text-decoration: underline; cursor: pointer; }
+.picker { display: grid; gap: 8px; max-width: 400px; margin-top: 20px; font-size: 13px; font-weight: 600; }
+select { min-height: 44px; padding: 8px; border: 1px solid #aebfc2; border-radius: 6px; background: white; color: #16343c; font: inherit; }
+.info { margin-top: 26px; padding: 15px 20px; border-radius: 10px; background: #e7f5f6; color: #005d74; }
+.info h2 { font-size: 21px; font-weight: 600; }
+.info p { margin-top: 12px; font-size: 13px; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 25px; }
+.card { min-height: 197px; padding: 15px 19px; border: 1px solid #e2e9eb; border-radius: 10px; background: white; }
+.card h2 { font-size: 21px; font-weight: 600; }
+.count, .date { margin-top: 12px; color: #61666a; font-size: 13px; }
+.verified { margin-top: 16px; color: #005d74; font-size: 13px; font-weight: 500; }
+details { margin-top: 16px; color: #005d74; font-size: 13px; }
+.draft-link { display: inline-block; margin-top: 16px; font-size: 13px; font-weight: 500; }
+summary { cursor: pointer; }
+dl { margin-bottom: 0; color: #16343c; }
+dl div { display: flex; justify-content: space-between; gap: 20px; padding: 7px 0; border-top: 1px solid #e2e9eb; }
+dd { margin: 0; white-space: nowrap; }
+.footnote { margin-top: 60px; color: #61666a; font-size: 13px; }
+@media (max-width: 1360px) { main { margin: 0 32px; } }
+@media (max-width: 700px) {
+  main { margin: 0 20px; padding: 19px 0 110px; }
+  h1 { font-size: 26px; }
+  .info { margin-top: 35px; padding: 14px; }
+  .info h2, .card h2 { font-size: 17px; }
+  .info p, .count, .date { font-size: 12px; }
+  .cards { grid-template-columns: 1fr; gap: 18px; margin-top: 22px; }
+  .card { min-height: 114px; padding: 11px 13px; }
+  .verified { margin-top: 12px; font-size: 12px; }
+  .footnote { margin-top: 32px; font-size: 12px; }
+}
